@@ -1,0 +1,13 @@
+/build/
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+cmake-build-debug/
+
+.idea/
+*.iml
+
+/nfsput
+/nfsput.exe
