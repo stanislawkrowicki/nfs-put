@@ -21,12 +21,31 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
-add_executable(nfsput main.cpp)
+# Assimp
+FetchContent_Declare(
+        assimp
+        GIT_REPOSITORY https://github.com/assimp/assimp.git
+        GIT_TAG v5.4.3
+)
+FetchContent_MakeAvailable(assimp)
 
-target_link_libraries(nfsput PRIVATE glfw)
-target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR})
+# stb_image
+FetchContent_Declare(
+        stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG        master
+)
+
+FetchContent_MakeAvailable(stb)
+
+add_executable(nfsput main.cpp shader_program.cpp
+        camera.hpp)
+
+target_link_libraries(nfsput PRIVATE glfw assimp)
+target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} .)
 
 if(UNIX)
     find_package(OpenGL REQUIRED)
-    target_link_libraries(nfsput PRIVATE OpenGL::GL)
+    find_package(GLEW REQUIRED)
+    target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW)
 endif()
