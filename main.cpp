@@ -25,6 +25,47 @@ struct Texture {
     std::string path;
 };
 
+unsigned int TextureFromMemory(const unsigned char* dataBuffer, size_t dataSize, const std::string& nameHint = "")
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load_from_memory(dataBuffer, static_cast<int>(dataSize), &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+        else
+            format = GL_RGB; // fallback
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Embedded texture failed to load";
+        if (!nameHint.empty())
+            std::cout << " (" << nameHint << ")";
+        std::cout << std::endl;
+    }
+
+    return textureID;
+}
+
 
 unsigned int TextureFromFile(const char *path, const std::string &directory)
 {
@@ -161,7 +202,7 @@ private:
     void loadModel(std::string path);
     void processNode(aiNode *node, const aiScene *scene);
     Mesh processMesh(aiMesh *mesh, const aiScene *scene);
-    std::vector<Texture> loadMaterialTextures(aiMaterial *mat, unsigned int materialIndex,
+    std::vector<Texture> loadMaterialTextures(aiMaterial *mat, const aiScene *scene, aiTextureType type,
                                          std::string typeName);
 };
 
@@ -249,107 +290,69 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
     }
 
     // process material
-    std::vector<Texture> indexTextures = loadMaterialTextures(
-        scene->mMaterials[mesh->mMaterialIndex],
-        mesh->mMaterialIndex,
-        "texture_index"
-    );
-    textures.insert(textures.end(), indexTextures.begin(), indexTextures.end());
-
-    // if(mesh->mMaterialIndex >= 0)
-    // {
-    //     aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-    //     std::vector<Texture> diffuseMaps = loadMaterialTextures(material,
-    //                                         aiTextureType_DIFFUSE, "texture_diffuse");
-    //     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-    //     std::vector<Texture> specularMaps = loadMaterialTextures(material,
-    //                                         aiTextureType_SPECULAR, "texture_specular");
-    //     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-    // }
+    if(mesh->mMaterialIndex >= 0)
+    {
+        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+        std::vector<Texture> diffuseMaps = loadMaterialTextures(material, scene,
+                                            aiTextureType_DIFFUSE, "texture_diffuse");
+        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+        std::vector<Texture> specularMaps = loadMaterialTextures(material, scene,
+                                            aiTextureType_SPECULAR, "texture_specular");
+        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+    }
 
     return Mesh(vertices, indices, textures);
 }
 
-std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, unsigned int materialIndex, std::string typeName)
+std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, const aiScene *scene, aiTextureType type, std::string typeName)
 {
     std::vector<Texture> textures;
+    for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+    {
+        aiString str;
+        mat->GetTexture(type, i, &str);
+        bool skip = false;
+        for(unsigned int j = 0; j < loadedTextures.size(); j++)
+        {
+            if(std::strcmp(loadedTextures[j].path.data(), str.C_Str()) == 0)
+            {
+                textures.push_back(loadedTextures[j]);
+                skip = true;
+                break;
+            }
+        }
+        if(!skip)
+        {   // if texture hasn't been loaded already, load it
+            Texture texture;
+            /* If the texture is internal (like in .glb format)
+             * the path starts with "*"  */
 
-    // Construct the filename from the material index
-    std::string filename = "gltf_embedded_" + std::to_string(materialIndex) + ".png";
+            if (str.C_Str()[0] == '*') {
+                int textureIndex = atoi(str.C_Str() + 1);
+                aiTexture* embeddedTexture = scene->mTextures[textureIndex];
 
-    // Check if already loaded
-    for (const auto& tex : loadedTextures) {
-        if (tex.path == filename) {
-            textures.push_back(tex);
-            return textures;
+                if (embeddedTexture->mHeight == 0) {
+                    /** PNG, JPG or some other known format */
+                    texture.id = TextureFromMemory(
+                        reinterpret_cast<unsigned char*>(embeddedTexture->pcData),
+                        embeddedTexture->mWidth,
+                        str.C_Str());
+                } else {
+                    std::cout << "Tried to load unknown texture format (uncompressed): " << str.C_Str() << std::endl;
+                    continue;
+                }
+            } else {
+                texture.id = TextureFromFile(str.C_Str(), directory);
+            }
+
+            texture.type = typeName;
+            texture.path = str.C_Str();
+            textures.push_back(texture);
+            loadedTextures.push_back(texture); // add to loaded textures
         }
     }
 
-    Texture texture;
-    texture.id = TextureFromFile(filename.c_str(), directory);
-    texture.type = typeName;
-    texture.path = filename;
-
-    textures.push_back(texture);
-    loadedTextures.push_back(texture);
-
     return textures;
-}
-
-
-// std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName)
-// {
-//     std::vector<Texture> textures;
-//     for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
-//     {
-//         aiString str;
-//         mat->GetTexture(type, i, &str);
-//         bool skip = false;
-//         for(unsigned int j = 0; j < loadedTextures.size(); j++)
-//         {
-//             if(std::strcmp(loadedTextures[j].path.data(), str.C_Str()) == 0)
-//             {
-//                 textures.push_back(loadedTextures[j]);
-//                 skip = true;
-//                 break;
-//             }
-//         }
-//         if(!skip)
-//         {   // if texture hasn't been loaded already, load it
-//             Texture texture;
-//             texture.id = TextureFromFile(str.C_Str(), directory);
-//             texture.type = typeName;
-//             texture.path = str.C_Str();
-//             textures.push_back(texture);
-//             loadedTextures.push_back(texture); // add to loaded textures
-//         }
-//     }
-//     return textures;
-// }
-
-void testAssimpImport() {
-    Assimp::Importer importer;
-
-    const std::string path = "../models/track.obj";
-
-    const aiScene* scene = importer.ReadFile(path,
-        aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType |
-        aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-        std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
-        return;
-    }
-
-    std::cout << "Model loaded successfully." << std::endl;
-    std::cout << "Number of meshes: " << scene->mNumMeshes << std::endl;
-    std::cout << "Number of materials:" << scene->mNumMaterials << std::endl;
-    std::cout << "Name of meshes:" << std::endl;
-
-    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
-        aiMesh* mesh = scene->mMeshes[i];
-        std::cout << "Mesh " << i << " has " << mesh->mNumVertices << " vertices." << std::endl;
-    }
 }
 
 void errorCallback(int error, const char* description) {
@@ -455,7 +458,8 @@ void drawScene(GLFWwindow *window) {
     // render the loaded model
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.3f, 0.3f, 0.3f));	// it's a bit too big for our scene, so scale it down
     glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, &model[0][0]);
     backpackModel->Draw(*sp);
 }
@@ -494,10 +498,10 @@ int main() {
         std::cerr << "Can't initialize GLEW: " << glewGetErrorString(glewErr);
     }
 
-    // stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(true);
     glEnable(GL_DEPTH_TEST);
 
-    backpackModel = new Model("../models/track.obj");
+    backpackModel = new Model("../models/track/track.glb");
     sp = new ShaderProgram("../shaders/v_simplest.glsl", NULL, "../shaders/f_simplest.glsl");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
