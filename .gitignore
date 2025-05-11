@@ -11,3 +11,5 @@ cmake-build-debug/
 
 /nfsput
 /nfsput.exe
+
+models/spielberg.glb
