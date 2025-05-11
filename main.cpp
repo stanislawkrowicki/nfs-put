@@ -217,7 +217,7 @@ void Model::loadModel(std::string path) {
     std::cout << "Loading " << path << std::endl;
 
     const aiScene *scene = import.ReadFile(path,
-        aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType);
+        aiProcess_Triangulate | aiProcess_PreTransformVertices);
 
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -458,8 +458,8 @@ void drawScene(GLFWwindow *window) {
     // render the loaded model
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.3f, 0.3f, 0.3f));	// it's a bit too big for our scene, so scale it down
+    // model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    // model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));	// it's a bit too big for our scene, so scale it down
     glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, &model[0][0]);
     backpackModel->Draw(*sp);
 }
@@ -501,7 +501,7 @@ int main() {
     stbi_set_flip_vertically_on_load(true);
     glEnable(GL_DEPTH_TEST);
 
-    backpackModel = new Model("../models/track/track.glb");
+    backpackModel = new Model("../models/spielberg.glb");
     sp = new ShaderProgram("../shaders/v_simplest.glsl", NULL, "../shaders/f_simplest.glsl");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
