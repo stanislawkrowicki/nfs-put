@@ -91,13 +91,12 @@ void drawScene(GLFWwindow *window) {
     glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), 800.0f / 600.0f, 0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
 
-    glUniformMatrix4fv(sp->u("P"), 1, GL_FALSE, &projection[0][0]);
-    glUniformMatrix4fv(sp->u("V"), 1, GL_FALSE, &view[0][0]);
-
+    sp->setUniform("P", projection);
+    sp->setUniform("V", view);
     // render the loaded model
     auto model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-    glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, &model[0][0]);
+    sp->setUniform("M", model);
     trackModel->Draw(*sp);
 }
 

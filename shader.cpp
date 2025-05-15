@@ -134,3 +134,7 @@ void Shader::setUniform(const std::string& name, const glm::vec3& value) const {
 void Shader::setUniform(const std::string& name, const glm::vec4& value) const {
     glUniform4fv(glGetUniformLocation(shaderID, name.c_str()), 1, glm::value_ptr(value));
 }
+
+void Shader::setUniform(const std::string& name, const glm::mat4& value, const bool transpose) const {
+    glUniformMatrix4fv(glGetUniformLocation(shaderID, name.c_str()), 1, transpose, glm::value_ptr(value));
+}
