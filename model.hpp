@@ -1,10 +1,14 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <string>
 #include <glm/glm.hpp>
-#include <assimp/scene.h>
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 #include "shader.hpp"
+
+constexpr GLuint DEFAULT_P_FLAGS = aiProcess_Triangulate | aiProcess_PreTransformVertices;
 
 struct Vertex {
     glm::vec3 Position;
@@ -35,6 +39,7 @@ private:
 class Model {
 public:
     explicit Model(const std::string& path);
+    Model(const std::string& path, unsigned int pFlags);
     void Draw(Shader &shader);
 
 private:
@@ -42,7 +47,7 @@ private:
     std::string directory;
     std::vector<Texture> loadedTextures;
 
-    void loadModel(const std::string& path);
+    void loadModel(const std::string& path, unsigned int pFlags);
     void processNode(const aiNode *node, const aiScene *scene);
     Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
     std::vector<Texture> loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, aiTextureType type, const std::string& typeName);

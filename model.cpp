@@ -118,7 +118,11 @@ void Mesh::Draw(const Shader &shader) const {
 }
 
 Model::Model(const std::string& path) {
-    loadModel(path);
+    loadModel(path, DEFAULT_P_FLAGS);
+}
+
+Model::Model(const std::string& path, const unsigned int pFlags) {
+    loadModel(path, pFlags);
 }
 
 void Model::Draw(Shader &shader) {
@@ -126,7 +130,7 @@ void Model::Draw(Shader &shader) {
         mesh.Draw(shader);
 }
 
-void Model::loadModel(const std::string& path) {
+void Model::loadModel(const std::string& path, unsigned int pFlags) {
     std::cout << "Loading model " << path << std::endl;
 
     Assimp::Importer import;
