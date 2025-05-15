@@ -135,10 +135,9 @@ int main() {
         std::cerr << "Can't initialize GLEW: " << glewGetErrorString(glewErr);
     }
 
-    stbi_set_flip_vertically_on_load(true);
     glEnable(GL_DEPTH_TEST);
 
-    trackModel = new Model("spielberg.glb");
+    trackModel = new Model("spielberg.glb", true);
     sp = new Shader("v_simplest.glsl", nullptr, "f_simplest.glsl");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

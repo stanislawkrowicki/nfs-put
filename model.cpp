@@ -117,11 +117,9 @@ void Mesh::Draw(const Shader &shader) const {
     glBindVertexArray(0);
 }
 
-Model::Model(const std::string& path) {
-    loadModel(path, DEFAULT_P_FLAGS);
-}
 
-Model::Model(const std::string& path, const unsigned int pFlags) {
+Model::Model(const std::string &path, const bool flipTexturesVertically, const unsigned int pFlags) {
+    stbi_set_flip_vertically_on_load(flipTexturesVertically);
     loadModel(path, pFlags);
 }
 

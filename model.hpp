@@ -38,10 +38,10 @@ private:
 
 class Model {
 public:
-    /* Path is relative to models/ directory */
-    explicit Model(const std::string& path);
-    /* Path is relative to models/ directory */
-    Model(const std::string& path, unsigned int pFlags);
+    explicit Model(const std::string& path,
+                   bool flipTexturesVertically = false,
+                   unsigned int pFlags = DEFAULT_P_FLAGS);
+
     void Draw(Shader &shader);
 
 private:
