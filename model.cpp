@@ -5,15 +5,23 @@
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 
-unsigned int UploadTexture(const unsigned char* data, const int width, const int height, const int nrComponents) {
+unsigned int UploadTexture(const unsigned char *data, const int width, const int height, const int nrComponents) {
     if (!data) return 0;
 
     GLenum format;
     switch (nrComponents) {
-        case 1: format = GL_RED; break;
-        case 2: format = GL_RG; break;
-        case 3: format = GL_RGB; break;
-        case 4: format = GL_RGBA; break;
+        case 1:
+            format = GL_RED;
+            break;
+        case 2:
+            format = GL_RG;
+            break;
+        case 3:
+            format = GL_RGB;
+            break;
+        case 4:
+            format = GL_RGBA;
+            break;
         default:
             std::cerr << "Unsupported number of components: " << nrComponents << std::endl;
             return 0;
@@ -33,14 +41,14 @@ unsigned int UploadTexture(const unsigned char* data, const int width, const int
     return textureID;
 }
 
-unsigned int TextureFromMemory(const unsigned char* dataBuffer, const size_t dataSize, const std::string& nameHint) {
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load_from_memory(dataBuffer, static_cast<int>(dataSize), &width, &height, &nrComponents, 0);
+unsigned int TextureFromMemory(const unsigned char *dataBuffer, const size_t dataSize, const std::string &nameHint) {
+    int            width, height, nrComponents;
+    unsigned char *data =
+        stbi_load_from_memory(dataBuffer, static_cast<int>(dataSize), &width, &height, &nrComponents, 0);
 
     if (!data) {
         std::cerr << "Embedded texture failed to load";
-        if (!nameHint.empty())
-            std::cerr << " (" << nameHint << ")";
+        if (!nameHint.empty()) std::cerr << " (" << nameHint << ")";
         std::cerr << std::endl;
         return 0;
     }
@@ -50,11 +58,11 @@ unsigned int TextureFromMemory(const unsigned char* dataBuffer, const size_t dat
     return texID;
 }
 
-unsigned int TextureFromFile(const char* path, const std::string& directory) {
+unsigned int TextureFromFile(const char *path, const std::string &directory) {
     const std::string filename = directory + '/' + path;
 
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+    int            width, height, nrComponents;
+    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
 
     if (!data) {
         std::cerr << "Texture failed to load at path: " << filename << std::endl;
@@ -81,16 +89,17 @@ void Mesh::setupMesh() {
     glBufferData(GL_ARRAY_BUFFER, static_cast<long>(vertices.size() * sizeof(Vertex)), &vertices[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<long>(indices.size() * sizeof(unsigned int)), &indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<long>(indices.size() * sizeof(unsigned int)), &indices[0],
+                 GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) 0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, Normal));
 
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, TexCoords));
 
     glBindVertexArray(0);
 }
@@ -119,7 +128,6 @@ void Mesh::Draw(const Shader &shader) const {
     glBindVertexArray(0);
 }
 
-
 Model::Model(const std::string &path, const bool flipTexturesVertically, const unsigned int pFlags) {
     stbi_set_flip_vertically_on_load(flipTexturesVertically);
     loadModel(path, pFlags);
@@ -130,11 +138,12 @@ void Model::Draw(Shader &shader) {
         mesh.Draw(shader);
 }
 
-void Model::loadModel(const std::string& path, unsigned int pFlags) {
+void Model::loadModel(const std::string &path, unsigned int pFlags) {
     std::cout << "Loading model " << path << std::endl;
 
     Assimp::Importer import;
-    const aiScene *scene = import.ReadFile(std::string(MODELS_PATH) + path, aiProcess_Triangulate | aiProcess_PreTransformVertices);
+    const aiScene   *scene =
+        import.ReadFile(std::string(MODELS_PATH) + path, aiProcess_Triangulate | aiProcess_PreTransformVertices);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
@@ -157,9 +166,9 @@ void Model::processNode(const aiNode *node, const aiScene *scene) {
 }
 
 Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
-    std::vector<Vertex> vertices;
+    std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
-    std::vector<Texture> textures;
+    std::vector<Texture>      textures;
 
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         Vertex vertex{};
@@ -180,7 +189,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     }
 
     aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-    auto diffuseMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE, "texture_diffuse");
+    auto        diffuseMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE, "texture_diffuse");
     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
     auto specularMaps = loadMaterialTextures(material, scene, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
@@ -188,15 +197,15 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     return {vertices, indices, textures};
 }
 
-std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, const aiTextureType type, const std::string& typeName) {
+std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, const aiTextureType type,
+                                                 const std::string &typeName) {
     std::vector<Texture> textures;
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
         aiString str;
         mat->GetTexture(type, i, &str);
 
-        auto it = std::find_if(loadedTextures.begin(), loadedTextures.end(), [&](const Texture& t) {
-            return std::strcmp(t.path.c_str(), str.C_Str()) == 0;
-        });
+        auto it = std::find_if(loadedTextures.begin(), loadedTextures.end(),
+                               [&](const Texture &t) { return std::strcmp(t.path.c_str(), str.C_Str()) == 0; });
 
         if (it != loadedTextures.end()) {
             textures.push_back(*it);
@@ -205,11 +214,12 @@ std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const ai
 
         Texture texture;
         if (str.C_Str()[0] == '*') {
-            const int textureIndex = std::stoi(str.C_Str() + 1);
-            aiTexture* embeddedTexture = scene->mTextures[textureIndex];
+            const int  textureIndex = std::stoi(str.C_Str() + 1);
+            aiTexture *embeddedTexture = scene->mTextures[textureIndex];
 
             if (embeddedTexture->mHeight == 0) {
-                texture.id = TextureFromMemory(reinterpret_cast<unsigned char*>(embeddedTexture->pcData), embeddedTexture->mWidth, str.C_Str());
+                texture.id = TextureFromMemory(reinterpret_cast<unsigned char *>(embeddedTexture->pcData),
+                                               embeddedTexture->mWidth, str.C_Str());
             } else {
                 std::cout << "Tried to load unknown texture format (uncompressed): " << str.C_Str() << std::endl;
                 continue;

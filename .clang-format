@@ -1,0 +1,42 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+BreakBeforeBraces: Attach
+
+IndentCaseLabels: true
+IndentGotoLabels: true
+IndentPPDirectives: AfterHash
+AllowShortIfStatementsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeColon
+
+Cpp11BracedListStyle: true
+Standard: c++17
+
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInSquareBrackets: false
+SpacesBeforeTrailingComments: 1
+
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: true
+
+IncludeBlocks: Preserve
+SortIncludes: Never
+IncludeCategories:
+  - Regex:           '^<.*\.h>'
+    Priority:        1
+    SortPriority:    0
+  - Regex:           '^".*\.h"'
+    Priority:        2
+    SortPriority:    1
+
+ReflowComments: true
+
+ColumnLimit: 120

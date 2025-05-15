@@ -17,15 +17,14 @@ enum Camera_Mode {
 };
 
 /* Default camera settings */
-constexpr float YAW         = -90.0f;
-constexpr float PITCH       =  0.0f;
-constexpr float SPEED       =  25.0f;
-constexpr float SENSITIVITY =  0.1f;
-constexpr float ZOOM        =  45.0f;
-constexpr Camera_Mode MODE  = FREE_ROAM;
+constexpr float       YAW = -90.0f;
+constexpr float       PITCH = 0.0f;
+constexpr float       SPEED = 25.0f;
+constexpr float       SENSITIVITY = 0.1f;
+constexpr float       ZOOM = 45.0f;
+constexpr Camera_Mode MODE = FREE_ROAM;
 
-class Camera
-{
+class Camera {
     /* Camera Attributes */
     glm::vec3 Position{};
     glm::vec3 Front;
@@ -38,21 +37,18 @@ class Camera
     float Pitch;
 
     /* Options */
-    float MovementSpeed;
-    float MouseSensitivity;
-    float Zoom;
+    float       MovementSpeed;
+    float       MouseSensitivity;
+    float       Zoom;
     Camera_Mode Mode;
 
-public:
+  public:
     /* Constructor by vectors */
-    explicit Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
-           glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
-           float yaw = YAW, float pitch = PITCH);
+    explicit Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
+                    float yaw = YAW, float pitch = PITCH);
 
     /* Constructor by scalars */
-    Camera(float posX, float posY, float posZ,
-           float upX, float upY, float upZ,
-           float yaw, float pitch);
+    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
     [[nodiscard]]
     glm::mat4 GetViewMatrix() const;
@@ -64,6 +60,7 @@ public:
 
     [[nodiscard]]
     float getZoom() const;
-private:
+
+  private:
     void updateCameraVectors();
 };
