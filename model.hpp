@@ -55,5 +55,6 @@ private:
     std::vector<Texture> loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, aiTextureType type, const std::string& typeName);
 };
 
+unsigned int UploadTexture(const unsigned char* data, int width, int height, int nrComponents);
 unsigned int TextureFromMemory(const unsigned char* dataBuffer, size_t dataSize, const std::string& nameHint = "");
 unsigned int TextureFromFile(const char *path, const std::string &directory);

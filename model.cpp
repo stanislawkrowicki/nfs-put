@@ -5,63 +5,65 @@
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 
-unsigned int TextureFromMemory(const unsigned char* dataBuffer, const size_t dataSize, const std::string& nameHint) {
+unsigned int UploadTexture(const unsigned char* data, const int width, const int height, const int nrComponents) {
+    if (!data) return 0;
+
+    GLenum format;
+    switch (nrComponents) {
+        case 1: format = GL_RED; break;
+        case 2: format = GL_RG; break;
+        case 3: format = GL_RGB; break;
+        case 4: format = GL_RGBA; break;
+        default:
+            std::cerr << "Unsupported number of components: " << nrComponents << std::endl;
+            return 0;
+    }
+
     unsigned int textureID;
     glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
-    int width, height, nrComponents;
-    unsigned char *data = stbi_load_from_memory(dataBuffer, static_cast<int>(dataSize), &width, &height, &nrComponents, 0);
-
-    if (data) {
-        const GLenum format = (nrComponents == 1) ? GL_RED : (nrComponents == 3) ? GL_RGB : GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    } else {
-        std::cerr << "Embedded texture failed to load";
-        if (!nameHint.empty())
-            std::cerr << " (" << nameHint << ")";
-        std::cerr << std::endl;
-    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     return textureID;
 }
 
-unsigned int TextureFromFile(const char *path, const std::string &directory) {
-    const std::string filename = directory + '/' + path;
-
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
+unsigned int TextureFromMemory(const unsigned char* dataBuffer, const size_t dataSize, const std::string& nameHint) {
     int width, height, nrComponents;
-    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
-    if (data) {
-        const GLenum format = (nrComponents == 1) ? GL_RED : (nrComponents == 3) ? GL_RGB : GL_RGBA;
+    unsigned char* data = stbi_load_from_memory(dataBuffer, static_cast<int>(dataSize), &width, &height, &nrComponents, 0);
 
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    } else {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
+    if (!data) {
+        std::cerr << "Embedded texture failed to load";
+        if (!nameHint.empty())
+            std::cerr << " (" << nameHint << ")";
+        std::cerr << std::endl;
+        return 0;
     }
 
-    return textureID;
+    const unsigned int texID = UploadTexture(data, width, height, nrComponents);
+    stbi_image_free(data);
+    return texID;
+}
+
+unsigned int TextureFromFile(const char* path, const std::string& directory) {
+    const std::string filename = directory + '/' + path;
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+
+    if (!data) {
+        std::cerr << "Texture failed to load at path: " << filename << std::endl;
+        return 0;
+    }
+
+    const unsigned int texID = UploadTexture(data, width, height, nrComponents);
+    stbi_image_free(data);
+    return texID;
 }
 
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
