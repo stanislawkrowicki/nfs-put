@@ -5,13 +5,13 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include "shader_program.hpp"
 #include "camera.hpp"
+#include <shader.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-ShaderProgram *sp;
+Shader *sp;
 
 struct Vertex {
     glm::vec3 Position;
@@ -118,7 +118,7 @@ public:
     std::vector<Texture> textures;
 
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
-    void Draw(ShaderProgram &shader);
+    void Draw(Shader &shader);
 };
 
 void Mesh::setupMesh()
@@ -158,7 +158,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
     setupMesh();
 }
 
-void Mesh::Draw(ShaderProgram &shader)
+void Mesh::Draw(Shader &shader)
 {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
@@ -173,7 +173,7 @@ void Mesh::Draw(ShaderProgram &shader)
         else if(name == "texture_specular")
             number = std::to_string(specularNr++);
 
-        glUniform1i(sp->u(("material." + name + number).c_str()), i);
+        glUniform1i(sp->u("material." + name + number), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
 
@@ -192,7 +192,7 @@ public:
     {
         loadModel(path);
     }
-    void Draw(ShaderProgram &shader);
+    void Draw(Shader &shader);
 private:
     // model data
     std::vector<Mesh> meshes;
@@ -206,7 +206,7 @@ private:
                                          std::string typeName);
 };
 
-void Model::Draw(ShaderProgram &shader) {
+void Model::Draw(Shader &shader) {
     for (unsigned int i = 0; i < meshes.size(); ++i)
         meshes[i].Draw(shader);
 }
@@ -502,7 +502,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
 
     backpackModel = new Model("../models/spielberg.glb");
-    sp = new ShaderProgram("../shaders/v_simplest.glsl", NULL, "../shaders/f_simplest.glsl");
+    sp = new Shader("../shaders/v_simplest.glsl", nullptr, "../shaders/f_simplest.glsl");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

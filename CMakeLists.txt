@@ -38,7 +38,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(stb)
 
-add_executable(nfsput main.cpp shader_program.cpp
+add_executable(nfsput main.cpp shader.cpp
         camera.hpp)
 
 target_link_libraries(nfsput PRIVATE glfw assimp)
