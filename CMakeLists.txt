@@ -41,7 +41,8 @@ FetchContent_MakeAvailable(stb)
 add_executable(nfsput main.cpp shader.cpp
         camera.hpp
         model.hpp
-        model.cpp)
+        model.cpp
+        camera.cpp)
 
 target_link_libraries(nfsput PRIVATE glfw assimp)
 target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} .)

@@ -106,7 +106,7 @@ void drawScene(GLFWwindow *window) {
     sp->use();
 
     // view/projection transformations
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 1000.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), 800.0f / 600.0f, 0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
 
     glUniformMatrix4fv(sp->u("P"), 1, GL_FALSE, &projection[0][0]);
