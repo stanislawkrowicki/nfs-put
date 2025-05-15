@@ -11,7 +11,7 @@ GLuint Shader::loadShaderWithType(const std::string& shaderPath, GLenum type) {
         std::ifstream shaderFile;
         shaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
 
-        shaderFile.open(shaderPath);
+        shaderFile.open(std::string(SHADERS_PATH) + shaderPath);
         std::stringstream shaderStream;
         shaderStream << shaderFile.rdbuf();
 

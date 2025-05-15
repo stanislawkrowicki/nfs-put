@@ -158,8 +158,8 @@ int main() {
     stbi_set_flip_vertically_on_load(true);
     glEnable(GL_DEPTH_TEST);
 
-    backpackModel = new Model("../models/spielberg.glb");
-    sp = new Shader("../shaders/v_simplest.glsl", nullptr, "../shaders/f_simplest.glsl");
+    backpackModel = new Model("spielberg.glb");
+    sp = new Shader("v_simplest.glsl", nullptr, "f_simplest.glsl");
 
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

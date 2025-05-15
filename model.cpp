@@ -134,7 +134,7 @@ void Model::loadModel(const std::string& path, unsigned int pFlags) {
     std::cout << "Loading model " << path << std::endl;
 
     Assimp::Importer import;
-    const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_PreTransformVertices);
+    const aiScene *scene = import.ReadFile(std::string(MODELS_PATH) + path, aiProcess_Triangulate | aiProcess_PreTransformVertices);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
@@ -143,7 +143,7 @@ void Model::loadModel(const std::string& path, unsigned int pFlags) {
     directory = path.substr(0, path.find_last_of('/'));
     processNode(scene->mRootNode, scene);
 
-    std::cout << "Finished loading model" << path << std::endl;
+    std::cout << "Finished loading model " << path << std::endl;
 }
 
 void Model::processNode(const aiNode *node, const aiScene *scene) {

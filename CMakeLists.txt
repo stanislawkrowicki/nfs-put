@@ -51,3 +51,8 @@ if(UNIX)
     find_package(GLEW REQUIRED)
     target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW)
 endif()
+
+set(MODELS_DIR "${CMAKE_SOURCE_DIR}/models/")
+set(SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders/")
+add_definitions(-DMODELS_PATH="${MODELS_DIR}")
+add_definitions(-DSHADERS_PATH="${SHADERS_DIR}")

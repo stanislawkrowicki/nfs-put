@@ -38,7 +38,9 @@ private:
 
 class Model {
 public:
+    /* Path is relative to models/ directory */
     explicit Model(const std::string& path);
+    /* Path is relative to models/ directory */
     Model(const std::string& path, unsigned int pFlags);
     void Draw(Shader &shader);
 
