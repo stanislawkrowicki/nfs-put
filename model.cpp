@@ -138,6 +138,10 @@ void Model::Draw(Shader &shader) {
         mesh.Draw(shader);
 }
 
+std::vector<Mesh> Model::getMeshes() {
+    return meshes;
+}
+
 void Model::loadModel(const std::string &path, unsigned int pFlags) {
     std::cout << "Loading model " << path << std::endl;
 

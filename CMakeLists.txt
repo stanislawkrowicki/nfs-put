@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
+
+# OpenGL target for Bullet
+set(OpenGL_GL_PREFERENCE GLVND)
+
 project(nfsput)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -38,14 +42,29 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(stb)
 
+# Bullet
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+        bullet
+        GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
+        GIT_TAG master
+)
+
+FetchContent_MakeAvailable(bullet)
+
 add_executable(nfsput main.cpp shader.cpp
         camera.hpp
         model.hpp
         model.cpp
-        camera.cpp)
+        camera.cpp
+)
 
-target_link_libraries(nfsput PRIVATE glfw assimp)
-target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} .)
+target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath)
+target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} ${bullet_SOURCE_DIR}/src .)
 
 if(UNIX)
     find_package(OpenGL REQUIRED)

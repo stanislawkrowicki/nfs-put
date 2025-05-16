@@ -41,6 +41,8 @@ class Model {
 
     void Draw(Shader &shader);
 
+    std::vector<Mesh> getMeshes();
+
   private:
     std::vector<Mesh>    meshes;
     std::string          directory;
