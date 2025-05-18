@@ -33,9 +33,6 @@ void Physics::initPhysics(const std::unique_ptr<btTriangleMesh> &triMesh) {
 
     /* Config */
     dynamicsWorld->setGravity(btVector3(0, -9.81f, 0));
-
-    /* Assign debug drawer */
-    debugDrawer = new DebugDrawer(dynamicsWorld);
 }
 
 void Physics::stepSimulation(const btScalar timeStep) const {
