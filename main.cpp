@@ -16,6 +16,8 @@
 
 #include "physics.hpp"
 #include "physics_debug.hpp"
+#include "vehicle.hpp"
+#include "vehicle_manager.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 Shader *sp;
@@ -200,18 +202,14 @@ void drawScene(GLFWwindow *window) {
     carShader->setUniform("P", projection);
 
     // Draw chassis
-    btTransform chassisTrans;
-    const auto &physics = Physics::getInstance();
-    const auto carChassis = physics.getCarChassis();
-    carChassis->getMotionState()->getWorldTransform(chassisTrans);
-    drawCube(chassisTrans, btVector3(1, 0.5, 2));
+    for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
+        const auto config = vehicle->getConfig();
+        const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
+        drawCube(chassisTrans, config.chassisHalfExtents);
 
-    const auto &debugDrawer = physics.getDebugDrawer();
-    if (debugDrawer->isEnabled())
-        debugDrawer->draw(projection * view * model);
-
-    for (int i = 0; i < vehicle->getNumWheels(); i++) {
-        drawWheel(vehicle->getWheelInfo(i), carShader);
+        for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
+            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
+        }
     }
 }
 
@@ -276,21 +274,24 @@ int main() {
 
     setupCubeGeometry();
     setupWheelGeometry();
-    // initPhysics(vertices, indices);
+
     auto &physics = Physics::getInstance();
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
     physics.initPhysics(triMesh);
+    const VehicleConfig defaultConfig;
+    defaultConfig.rotation = btQuaternion(btVector3(0, 1, 0), SIMD_HALF_PI);
 
-    vehicle = physics.addVehicleToWorld();
+    const auto vehicle = VehicleManager::getInstance().createVehicle(defaultConfig);
+    const auto btVehicle = vehicle->getBtVehicle();
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(1.0f / 60.0f);
 
         // Always forward
-        vehicle->applyEngineForce(1000.f, 2);
-        vehicle->applyEngineForce(1000.f, 3);
-        vehicle->setSteeringValue(0.0f, 0);
-        vehicle->setSteeringValue(0.0f, 1);
+        btVehicle->applyEngineForce(1000.f, 2);
+        btVehicle->applyEngineForce(1000.f, 3);
+        btVehicle->setSteeringValue(0.0f, 0);
+        btVehicle->setSteeringValue(0.0f, 1);
         drawScene(window);
         glfwSwapBuffers(window);
         glfwPollEvents();

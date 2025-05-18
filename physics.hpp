@@ -4,7 +4,6 @@
 #include "physics_debug.hpp"
 #include "model.hpp"
 #include "btBulletDynamicsCommon.h"
-#include "BulletDynamics/Vehicle/btRaycastVehicle.h"
 
 class Physics {
     DebugDrawer *debugDrawer;
@@ -17,12 +16,6 @@ class Physics {
     btBvhTriangleMeshShape *groundShape{};
     btDefaultMotionState *groundMotion{};
     btRigidBody *groundRigidBody{};
-
-    btBoxShape *chassisShape{};
-    btDefaultMotionState *chassisMotion{};
-    btDefaultVehicleRaycaster *raycaster{};
-    btRaycastVehicle *vehicle{};
-    btRigidBody *carChassis{};
 
     Physics();
 
@@ -46,14 +39,15 @@ public:
 
     void stepSimulation(btScalar timeStep) const;
 
-    btRaycastVehicle *addVehicleToWorld();
-
     static std::unique_ptr<btTriangleMesh> btTriMeshFromModel(const std::vector<Vertex> &vertices,
                                                               const std::vector<unsigned int> &indices);
 
-    [[nodiscard]]
-    btRigidBody *getCarChassis() const;
+    // [[nodiscard]]
+    // btRigidBody *getCarChassis() const;
 
     [[nodiscard]]
     DebugDrawer *getDebugDrawer() const;
+
+    [[nodiscard]]
+    btDynamicsWorld *getDynamicsWorld() const;
 };

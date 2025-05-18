@@ -1,6 +1,5 @@
 #include "physics.hpp"
 
-#include <iostream>
 #include <memory>
 
 #include "model.hpp"
@@ -43,50 +42,6 @@ void Physics::stepSimulation(const btScalar timeStep) const {
     dynamicsWorld->stepSimulation(timeStep);
 }
 
-btRaycastVehicle *Physics::addVehicleToWorld() {
-    chassisShape = new btBoxShape(btVector3(1, 0.5, 2));
-    btTransform chassisTransform;
-    chassisTransform.setIdentity();
-    chassisTransform.setOrigin(btVector3(0, 2, 3));
-    const btQuaternion rotation(btVector3(0, 1, 0), SIMD_HALF_PI);
-    chassisTransform.setRotation(rotation);
-
-    constexpr btScalar mass = 800;
-    btVector3 inertia(0, 0, 0);
-    chassisShape->calculateLocalInertia(mass, inertia);
-    chassisMotion = new btDefaultMotionState(chassisTransform);
-    const btRigidBody::btRigidBodyConstructionInfo carCI(mass, chassisMotion, chassisShape, inertia);
-    carChassis = new btRigidBody(carCI);
-    dynamicsWorld->addRigidBody(carChassis);
-
-    const btRaycastVehicle::btVehicleTuning tuning;
-    raycaster = new btDefaultVehicleRaycaster(dynamicsWorld);
-    vehicle = new btRaycastVehicle(tuning, carChassis, raycaster);
-    carChassis->setActivationState(DISABLE_DEACTIVATION);
-    dynamicsWorld->addVehicle(vehicle);
-
-    const btVector3 wheelDir(0, -1, 0);
-    const btVector3 wheelAxle(1, 0, 0);
-    constexpr float suspensionRest = 0.6f;
-    constexpr float wheelRadius = 0.5f;
-
-    vehicle->addWheel(btVector3(-1.5, -0.5, 1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, true);
-    vehicle->addWheel(btVector3(1.5, -0.5, 1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, true);
-    vehicle->addWheel(btVector3(-1.5, -0.5, -1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, false);
-    vehicle->addWheel(btVector3(1.5, -0.5, -1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, false);
-
-    for (int i = 0; i < vehicle->getNumWheels(); i++) {
-        btWheelInfo &wheel = vehicle->getWheelInfo(i);
-        wheel.m_suspensionStiffness = 20;
-        wheel.m_wheelsDampingRelaxation = 2.3f;
-        wheel.m_wheelsDampingCompression = 4.4f;
-        wheel.m_frictionSlip = 1000;
-        wheel.m_rollInfluence = 0.1;
-    }
-
-    return vehicle;
-}
-
 std::unique_ptr<btTriangleMesh> Physics::
 btTriMeshFromModel(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices) {
     auto triMesh = std::make_unique<btTriangleMesh>();
@@ -106,11 +61,14 @@ btTriMeshFromModel(const std::vector<Vertex> &vertices, const std::vector<unsign
     return triMesh;
 }
 
-btRigidBody *Physics::getCarChassis() const {
-    return carChassis;
-}
+// btRigidBody *Physics::getCarChassis() const {
+//     return carChassis;
+// }
 
 DebugDrawer *Physics::getDebugDrawer() const {
     return debugDrawer;
 }
 
+btDynamicsWorld *Physics::getDynamicsWorld() const {
+    return dynamicsWorld;
+}
