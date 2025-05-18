@@ -27,6 +27,13 @@ public:
         return vehicle;
     }
 
+    void removeVehicle(const std::shared_ptr<Vehicle> &vehicle) {
+        vehicles.erase(
+            std::remove(vehicles.begin(), vehicles.end(), vehicle),
+            vehicles.end()
+        );
+    }
+
     [[nodiscard]]
     const std::vector<std::shared_ptr<Vehicle> > &getVehicles() const {
         return vehicles;

@@ -1,5 +1,6 @@
 #include "vehicle.hpp"
 
+#include <iostream>
 #include <utility>
 
 void Vehicle::createBtVehicle() {
@@ -46,7 +47,16 @@ Vehicle::Vehicle(VehicleConfig config): config(std::move(config)) {
     createBtVehicle();
 }
 
-Vehicle::~Vehicle() = default;
+Vehicle::~Vehicle() {
+    dynamicsWorld->removeAction(btVehicle);
+    dynamicsWorld->removeRigidBody(btVehicle->getRigidBody());
+
+    delete chassisShape;
+    delete chassisMotion;
+    delete chassis;
+    delete raycaster;
+    delete btVehicle;
+}
 
 void Vehicle::addToWorld() const {
     dynamicsWorld->addRigidBody(chassis);
