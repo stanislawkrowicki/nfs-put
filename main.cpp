@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 
+#include "physics_debug.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 Shader *sp;
@@ -67,82 +68,6 @@ void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
     camera.ProcessMouseScroll(static_cast<float>(yOffset));
 }
 
-class DebugDrawer : public btIDebugDraw {
-    int m_debugMode = DBG_DrawWireframe;
-
-    GLuint vao = 0, vbo = 0;
-    std::vector<float> lineVertices; // stores x,y,z for all line points
-
-public:
-    DebugDrawer() {
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glEnableVertexAttribArray(0); // position
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
-
-    ~DebugDrawer() {
-        glDeleteBuffers(1, &vbo);
-        glDeleteVertexArrays(1, &vao);
-    }
-
-    void clear() {
-        lineVertices.clear();
-    }
-
-    virtual void drawLine(const btVector3 &from, const btVector3 &to, const btVector3 &color) override {
-        lineVertices.push_back(from.x());
-        lineVertices.push_back(from.y());
-        lineVertices.push_back(from.z());
-
-        lineVertices.push_back(to.x());
-        lineVertices.push_back(to.y());
-        lineVertices.push_back(to.z());
-    }
-
-    virtual void drawContactPoint(const btVector3 &, const btVector3 &, btScalar, int, const btVector3 &) override {
-    }
-
-    virtual void reportErrorWarning(const char *warningString) override {
-        std::cerr << "Bullet Warning: " << warningString << std::endl;
-    }
-
-    virtual void draw3dText(const btVector3 &, const char *) override {
-    }
-
-    virtual void setDebugMode(int debugMode) override { m_debugMode = debugMode; }
-    virtual int getDebugMode() const override { return m_debugMode; }
-
-    void flush(const glm::mat4 &model, const glm::mat4 &view, const glm::mat4 &projection, const glm::vec3 &color) {
-        if (lineVertices.empty()) return;
-
-        carShader->use();
-
-        carShader->setUniform("model", model);
-        carShader->setUniform("view", view);
-        carShader->setUniform("projection", projection);
-        carShader->setUniform("color", color);
-
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-        glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(float), lineVertices.data(), GL_DYNAMIC_DRAW);
-
-        glDrawArrays(GL_LINES, 0, (GLsizei) (lineVertices.size() / 3));
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-        glUseProgram(0);
-
-        clear();
-    }
-};
-
 btDiscreteDynamicsWorld *dynamicsWorld;
 btRaycastVehicle *vehicle;
 btRigidBody *carChassis;
@@ -190,7 +115,7 @@ void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     model = glm::scale(model, glm::vec3(halfExtents.x() * 2, halfExtents.y() * 2, halfExtents.z() * 2));
 
     carShader->use();
-    carShader->setUniform("model", model);
+    carShader->setUniform("M", model);
     carShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
@@ -240,7 +165,7 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader) {
     model = glm::scale(model, glm::vec3(wheel.m_wheelsRadius, wheel.m_wheelsRadius, 1.0f));
 
     shader->use();
-    shader->setUniform("model", model);
+    shader->setUniform("M", model);
     shader->setUniform("color", glm::vec3(1.0f, 0.0f, 0.0f)); // red
 
     glBindVertexArray(wheelVAO);
@@ -274,8 +199,8 @@ void drawScene(GLFWwindow *window) {
     trackModel->Draw(*sp);
 
     carShader->use();
-    carShader->setUniform("view", view);
-    carShader->setUniform("projection", projection);
+    carShader->setUniform("V", view);
+    carShader->setUniform("P", projection);
 
     // Draw chassis
     btTransform chassisTrans;
@@ -283,8 +208,8 @@ void drawScene(GLFWwindow *window) {
     // std::cout << "Car Position: " << pos.getX() << ", " << pos.getY() << ", " << pos.getZ() << std::endl;
     drawCube(chassisTrans, btVector3(1, 0.5, 2));
 
-    // dynamicsWorld->debugDrawWorld();
-    // debugDrawer->flush(model, view, projection, glm::vec3(0.0f, 1.0f, 0.0f));
+    if (debugDrawer->isEnabled())
+        debugDrawer->draw(projection * view * model);
 
     for (int i = 0; i < vehicle->getNumWheels(); i++) {
         drawWheel(vehicle->getWheelInfo(i), carShader);
@@ -348,8 +273,7 @@ void initPhysics(const std::vector<Vertex> &vertices, const std::vector<unsigned
     carChassis->setActivationState(DISABLE_DEACTIVATION);
     dynamicsWorld->addVehicle(vehicle);
 
-    debugDrawer = new DebugDrawer();
-    dynamicsWorld->setDebugDrawer(debugDrawer);
+    debugDrawer = new DebugDrawer(dynamicsWorld);
 
     btVector3 wheelDir(0, -1, 0);
     btVector3 wheelAxle(1, 0, 0);
