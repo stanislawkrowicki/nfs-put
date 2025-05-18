@@ -63,6 +63,8 @@ add_executable(nfsput main.cpp shader.cpp
         camera.cpp
         physics_debug.hpp
         physics_debug.cpp
+        physics.hpp
+        physics.cpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath)

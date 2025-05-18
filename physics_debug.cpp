@@ -67,11 +67,6 @@ void DebugDrawer::draw(const glm::mat4 &PVM) {
     }
 
     dynamicsWorld->debugDrawWorld();
-    std::cout << "before check" << std::endl;
-
-    // if (lineVertices.empty()) return;
-
-    std::cout << "drawing" << std::endl;
 
     shader->use();
     shader->setUniform("PVM", PVM);

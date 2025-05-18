@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 
+#include "physics.hpp"
 #include "physics_debug.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
@@ -67,12 +68,6 @@ void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
 void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
     camera.ProcessMouseScroll(static_cast<float>(yOffset));
 }
-
-btDiscreteDynamicsWorld *dynamicsWorld;
-btRaycastVehicle *vehicle;
-btRigidBody *carChassis;
-
-DebugDrawer *debugDrawer;
 
 GLuint cubeVAO, cubeVBO;
 
@@ -173,6 +168,8 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader) {
     glBindVertexArray(0);
 }
 
+btRaycastVehicle *vehicle;
+
 void drawScene(GLFWwindow *window) {
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
@@ -204,10 +201,12 @@ void drawScene(GLFWwindow *window) {
 
     // Draw chassis
     btTransform chassisTrans;
+    const auto &physics = Physics::getInstance();
+    const auto carChassis = physics.getCarChassis();
     carChassis->getMotionState()->getWorldTransform(chassisTrans);
-    // std::cout << "Car Position: " << pos.getX() << ", " << pos.getY() << ", " << pos.getZ() << std::endl;
     drawCube(chassisTrans, btVector3(1, 0.5, 2));
 
+    const auto &debugDrawer = physics.getDebugDrawer();
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
 
@@ -215,86 +214,6 @@ void drawScene(GLFWwindow *window) {
         drawWheel(vehicle->getWheelInfo(i), carShader);
     }
 }
-
-void initPhysics(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices) {
-    btDefaultCollisionConfiguration *collisionConfig = new btDefaultCollisionConfiguration();
-    btCollisionDispatcher *dispatcher = new btCollisionDispatcher(collisionConfig);
-    btBroadphaseInterface *broadphase = new btDbvtBroadphase();
-    btSequentialImpulseConstraintSolver *solver = new btSequentialImpulseConstraintSolver();
-
-    dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfig);
-    dynamicsWorld->setGravity(btVector3(0, -9.81f, 0));
-
-    auto *triMesh = new btTriangleMesh();
-
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        const Vertex &v0 = vertices[indices[i]];
-        const Vertex &v1 = vertices[indices[i + 1]];
-        const Vertex &v2 = vertices[indices[i + 2]];
-
-        btVector3 bv0(v0.Position.x, v0.Position.y, v0.Position.z);
-        btVector3 bv1(v1.Position.x, v1.Position.y, v1.Position.z);
-        btVector3 bv2(v2.Position.x, v2.Position.y, v2.Position.z);
-
-        triMesh->addTriangle(bv0, bv1, bv2);
-    }
-
-    bool useQuantizedAabbCompression = false;
-    btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(triMesh, useQuantizedAabbCompression);
-    groundShape->setMargin(0.02f);
-
-    // Motion state: identity transform (no offset)
-    btDefaultMotionState *groundMotion = new btDefaultMotionState(btTransform::getIdentity());
-
-    btRigidBody::btRigidBodyConstructionInfo groundCI(0.0f, groundMotion, groundShape);
-    btRigidBody *groundRigidBody = new btRigidBody(groundCI);
-    dynamicsWorld->addRigidBody(groundRigidBody);
-
-    // Car chassis
-    btCollisionShape *chassisShape = new btBoxShape(btVector3(1, 0.5, 2));
-    btTransform chassisTransform;
-    chassisTransform.setIdentity();
-    chassisTransform.setOrigin(btVector3(0, 2, 3));
-    btQuaternion rotation(btVector3(0, 1, 0), SIMD_HALF_PI);
-    chassisTransform.setRotation(rotation);
-
-    btScalar mass = 800;
-    btVector3 inertia(0, 0, 0);
-    chassisShape->calculateLocalInertia(mass, inertia);
-    btDefaultMotionState *chassisMotion = new btDefaultMotionState(chassisTransform);
-    btRigidBody::btRigidBodyConstructionInfo carCI(mass, chassisMotion, chassisShape, inertia);
-    carChassis = new btRigidBody(carCI);
-    dynamicsWorld->addRigidBody(carChassis);
-
-    // Vehicle system
-    btRaycastVehicle::btVehicleTuning tuning;
-    btVehicleRaycaster *raycaster = new btDefaultVehicleRaycaster(dynamicsWorld);
-    vehicle = new btRaycastVehicle(tuning, carChassis, raycaster);
-    carChassis->setActivationState(DISABLE_DEACTIVATION);
-    dynamicsWorld->addVehicle(vehicle);
-
-    debugDrawer = new DebugDrawer(dynamicsWorld);
-
-    btVector3 wheelDir(0, -1, 0);
-    btVector3 wheelAxle(1, 0, 0);
-    float suspensionRest = 0.6f;
-    float wheelRadius = 0.5f;
-
-    vehicle->addWheel(btVector3(-1.5, -0.5, 1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, true);
-    vehicle->addWheel(btVector3(1.5, -0.5, 1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, true);
-    vehicle->addWheel(btVector3(-1.5, -0.5, -1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, false);
-    vehicle->addWheel(btVector3(1.5, -0.5, -1.5), wheelDir, wheelAxle, suspensionRest, wheelRadius, tuning, false);
-
-    for (int i = 0; i < vehicle->getNumWheels(); i++) {
-        btWheelInfo &wheel = vehicle->getWheelInfo(i);
-        wheel.m_suspensionStiffness = 20;
-        wheel.m_wheelsDampingRelaxation = 2.3f;
-        wheel.m_wheelsDampingCompression = 4.4f;
-        wheel.m_frictionSlip = 1000;
-        wheel.m_rollInfluence = 0.1f;
-    }
-}
-
 
 int main() {
     if (!glfwInit()) {
@@ -355,15 +274,17 @@ int main() {
         vertexOffset += mesh.vertices.size();
     }
 
-
-    // auto positions = getBtPositionsFromVertices(vertices);
-
     setupCubeGeometry();
     setupWheelGeometry();
-    initPhysics(vertices, indices);
+    // initPhysics(vertices, indices);
+    auto &physics = Physics::getInstance();
+    const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
+    physics.initPhysics(triMesh);
+
+    vehicle = physics.addVehicleToWorld();
 
     while (!glfwWindowShouldClose(window)) {
-        dynamicsWorld->stepSimulation(1.0f / 60.0f);
+        physics.stepSimulation(1.0f / 60.0f);
 
         // Always forward
         vehicle->applyEngineForce(1000.f, 2);
