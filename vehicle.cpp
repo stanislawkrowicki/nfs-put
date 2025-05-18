@@ -74,3 +74,49 @@ std::string Vehicle::getName() const {
 VehicleConfig Vehicle::getConfig() const {
     return config;
 }
+
+void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,
+                             const bool right, const float dt) const {
+    float appliedEngineForce = 0.0f;
+    float appliedHandbrakeForce = 0.0f;
+
+    if (forward)
+        appliedEngineForce = config.engineForce;
+
+    if (backward) {
+        appliedEngineForce = -config.brakingForce;
+    }
+
+    if (handbrake)
+        appliedHandbrakeForce = config.handbrakeForce;
+
+    /* Technically set to front wheels, but feels like rear-wheel drive? */
+    btVehicle->applyEngineForce(appliedEngineForce, 0); // Front left
+    btVehicle->applyEngineForce(appliedEngineForce, 1); // Front right
+
+    btVehicle->setBrake(appliedHandbrakeForce, 2); // Rear left
+    btVehicle->setBrake(appliedHandbrakeForce, 3); // Rear right
+
+    static float steering = 0.0f;
+
+    /** See config.steeringIncrement comment */
+    constexpr float steeringMultiplicationFactor = 60;
+
+    const auto steeringDelta = config.steeringIncrement * steeringMultiplicationFactor * dt;
+
+    if (left) {
+        steering += steeringDelta;
+        steering = std::min(steering, config.maxSteeringAngle);
+    } else if (right) {
+        steering -= steeringDelta;
+        steering = std::max(steering, -config.maxSteeringAngle);
+    } else {
+        steering *= 0.9f;
+        if (steering < 0.05f)
+            steering = 0;
+    }
+
+    btVehicle->setSteeringValue(steering, 0); // Front left
+    btVehicle->setSteeringValue(steering, 1); // Front right;
+}
+

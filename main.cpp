@@ -38,10 +38,20 @@ float lastFrame = 0.0f;
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) camera.ProcessKeyboard(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) camera.ProcessKeyboard(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) camera.ProcessKeyboard(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
+    const bool left = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+    const bool right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+    const bool handbrake = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+    const bool forward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+    const bool backward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+
+    vehicle->updateControls(forward, backward, handbrake, left, right, deltaTime);
 }
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) { glViewport(0, 0, width, height); }
@@ -170,14 +180,10 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader) {
     glBindVertexArray(0);
 }
 
-btRaycastVehicle *vehicle;
-
 void drawScene(GLFWwindow *window) {
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-
-    processInput(window);
 
     glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -279,19 +285,16 @@ int main() {
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
     physics.initPhysics(triMesh);
     const VehicleConfig defaultConfig;
-    defaultConfig.rotation = btQuaternion(btVector3(0, 1, 0), SIMD_HALF_PI);
+    defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
 
     const auto vehicle = VehicleManager::getInstance().createVehicle(defaultConfig);
-    const auto btVehicle = vehicle->getBtVehicle();
 
     while (!glfwWindowShouldClose(window)) {
-        physics.stepSimulation(1.0f / 60.0f);
+        physics.stepSimulation(deltaTime);
 
-        // Always forward
-        btVehicle->applyEngineForce(1000.f, 2);
-        btVehicle->applyEngineForce(1000.f, 3);
-        btVehicle->setSteeringValue(0.0f, 0);
-        btVehicle->setSteeringValue(0.0f, 1);
+        processInput(window);
+        processVehicleInputs(window, vehicle, deltaTime);
+
         drawScene(window);
         glfwSwapBuffers(window);
         glfwPollEvents();

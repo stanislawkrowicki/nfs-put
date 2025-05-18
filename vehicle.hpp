@@ -31,4 +31,6 @@ public:
 
     [[nodiscard]]
     VehicleConfig getConfig() const;
+
+    void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
 };
