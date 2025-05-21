@@ -37,6 +37,36 @@ float lastFrame = 0.0f;
 
 std::shared_ptr<Vehicle> playerVehicle;
 
+/* Switching between windowed and fullscreen */
+constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
+bool isFullscreen = false;
+int windowedX, windowedY, windowedWidth, windowedHeight;
+float currentWindowWidth = DEFAULT_WINDOW_WIDTH, currentWindowHeight = DEFAULT_WINDOW_HEIGHT;
+
+void toggleFullscreen(GLFWwindow *window) {
+    isFullscreen = !isFullscreen;
+
+    GLFWmonitor *primaryMonitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode *mode = glfwGetVideoMode(primaryMonitor);
+
+    if (isFullscreen) {
+        glfwGetWindowPos(window, &windowedX, &windowedY);
+        glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
+
+        glfwSetWindowMonitor(window, primaryMonitor,
+                             0, 0, mode->width, mode->height,
+                             mode->refreshRate);
+        currentWindowWidth = static_cast<float>(mode->width);
+        currentWindowHeight = static_cast<float>(mode->height);
+    } else {
+        glfwSetWindowMonitor(window, nullptr,
+                             windowedX, windowedY, windowedWidth, windowedHeight,
+                             mode->refreshRate);
+        currentWindowWidth = static_cast<float>(windowedWidth);
+        currentWindowHeight = static_cast<float>(windowedHeight);
+    }
+}
+
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
 
@@ -49,6 +79,7 @@ void processInput(GLFWwindow *window) {
 void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, const int action, const int mods) {
     if (key == GLFW_KEY_V && action == GLFW_PRESS) camera.setNextCameraMode();
     if (key == GLFW_KEY_F6 && action == GLFW_PRESS) Physics::getInstance().getDebugDrawer()->toggle();
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) toggleFullscreen(window);
 }
 
 void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
@@ -61,7 +92,11 @@ void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &ve
     vehicle->updateControls(forward, backward, handbrake, left, right, deltaTime);
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) { glViewport(0, 0, width, height); }
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+    glViewport(0, 0, width, height);
+    currentWindowHeight = static_cast<float>(height);
+    currentWindowWidth = static_cast<float>(width);
+}
 
 void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
     auto xPos = static_cast<float>(xposIn);
@@ -207,7 +242,9 @@ void drawScene(GLFWwindow *window) {
     camera.updateCamera(*vehPos);
 
     // view/projection transformations
-    glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), 800.0f / 600.0f, 0.1f, 1000.0f);
+    const auto aspectRatio = currentWindowWidth / currentWindowHeight;
+    glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
+                                            0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
 
     sp->setUniform("P", projection);
@@ -250,7 +287,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     glfwSetErrorCallback(errorCallback);
-    GLFWwindow *window = glfwCreateWindow(800, 600, "NFS PUT", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "NFS PUT", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -258,7 +295,12 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
+
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, processKeyCallbacks);
