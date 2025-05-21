@@ -7,17 +7,19 @@ class Vehicle {
 
     VehicleConfig config;
 
-    btBoxShape *chassisShape{};
+    btCompoundShape *chassisShape{};
     btMotionState *chassisMotion{};
     btRigidBody *chassis{};
 
     btVehicleRaycaster *raycaster{};
     btRaycastVehicle *btVehicle{};
 
+    std::shared_ptr<Model> model;
+
     void createBtVehicle();
 
 public:
-    explicit Vehicle(VehicleConfig config);
+    explicit Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel);
 
     ~Vehicle();
 
@@ -31,6 +33,9 @@ public:
 
     [[nodiscard]]
     VehicleConfig getConfig() const;
+
+    [[nodiscard]]
+    std::shared_ptr<Model> getModel() const;
 
     void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
 };

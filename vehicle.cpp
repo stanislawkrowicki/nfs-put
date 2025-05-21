@@ -4,7 +4,16 @@
 #include <utility>
 
 void Vehicle::createBtVehicle() {
-    chassisShape = new btBoxShape(config.chassisHalfExtents);
+    auto boxShape = new btBoxShape(config.chassisHalfExtents);
+
+    chassisShape = new btCompoundShape();
+
+    btTransform massTransform;
+    massTransform.setIdentity();
+    /* By default, the  center of mass is in the middle, so we move it down */
+    massTransform.setOrigin(btVector3(0, -0.1f, 0));
+
+    chassisShape->addChildShape(massTransform, boxShape);
 
     btTransform chassisTransform;
     chassisTransform.setIdentity();
@@ -13,6 +22,7 @@ void Vehicle::createBtVehicle() {
 
     btVector3 inertia(0, 0, 0);
     chassisShape->calculateLocalInertia(config.mass, inertia);
+
     chassisMotion = new btDefaultMotionState(chassisTransform);
     const btRigidBody::btRigidBodyConstructionInfo carCI(config.mass, chassisMotion, chassisShape, inertia);
     chassis = new btRigidBody(carCI);
@@ -42,8 +52,9 @@ void Vehicle::createBtVehicle() {
     }
 }
 
-Vehicle::Vehicle(VehicleConfig config): config(std::move(config)) {
+Vehicle::Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel): config(std::move(config)) {
     dynamicsWorld = Physics::getInstance().getDynamicsWorld();
+    model = std::move(vehicleModel);
     createBtVehicle();
 }
 
@@ -73,6 +84,10 @@ std::string Vehicle::getName() const {
 
 VehicleConfig Vehicle::getConfig() const {
     return config;
+}
+
+std::shared_ptr<Model> Vehicle::getModel() const {
+    return model;
 }
 
 void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,

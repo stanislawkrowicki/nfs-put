@@ -193,6 +193,15 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     }
 
     aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+    for (int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); ++i)
+        std::cout << "Found DIFFUSE texture: " << std::endl;
+
+    for (int i = 0; i < material->GetTextureCount(aiTextureType_BASE_COLOR); ++i)
+        std::cout << "Found BASE_COLOR texture: " << std::endl;
+
+    for (int i = 0; i < material->GetTextureCount(aiTextureType_METALNESS); ++i)
+        std::cout << "Found METALNESS texture: " << std::endl;
+
     auto        diffuseMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE, "texture_diffuse");
     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
     auto specularMaps = loadMaterialTextures(material, scene, aiTextureType_SPECULAR, "texture_specular");

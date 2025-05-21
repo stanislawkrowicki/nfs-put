@@ -16,7 +16,7 @@ struct VehicleConfig {
     mutable btQuaternion rotation = btQuaternion::getIdentity();
 
     /* Chassis */
-    mutable btVector3 chassisHalfExtents = {1, 0.5, 2};
+    mutable btVector3 chassisHalfExtents = {0.87, 0.55, 2.4};
     mutable btScalar chassisMargin = 0.02f;
 
     mutable btScalar mass = 800.0f;
@@ -28,7 +28,7 @@ struct VehicleConfig {
 
     /* Suspension */
     mutable btScalar suspensionStiffness = 20;
-    mutable btScalar suspensionRestLength = 0.6f;
+    mutable btScalar suspensionRestLength = 0.2f;
     mutable btScalar dampingCompression = 4.4f;
     mutable btScalar dampingRelaxation = 2.3f;
 
@@ -36,8 +36,8 @@ struct VehicleConfig {
     mutable btRaycastVehicle::btVehicleTuning tuning;
 
     /* Wheels */
-    mutable btScalar wheelRadius = 0.5f;
-    mutable btScalar wheelWidth = 0.4f; // only for graphics
+    mutable btScalar wheelRadius = 0.7f;
+    mutable btScalar wheelWidth = 0.6f; // only for graphics
     mutable btScalar frictionSlip = 1.2f;
     mutable btScalar rollInfluence = 1.0f;
 
@@ -48,9 +48,9 @@ struct VehicleConfig {
     mutable btVector3 wheelAxleCS = {-1, 0, 0};
 
     mutable std::vector<WheelPlacement> wheels = {
-        {{-1.5f, -0.2f, 1.5f}, true}, // Front Left
-        {{1.5f, -0.2f, 1.5f}, true}, // Front Right
-        {{-1.5f, -0.2f, -1.5f}, false}, // Rear Left
-        {{1.5f, -0.2f, -1.5f}, false} // Rear Right
+        {{-1.0f, 0.0f, 1.6f}, true}, // Front Left
+        {{1.0f, 0.0f, 1.6f}, true}, // Front Right
+        {{-1.0f, 0.0f, -1.2f}, false}, // Rear Left
+        {{1.0f, 0.0f, -1.2f}, false} // Rear Right
     };
 };

@@ -255,16 +255,26 @@ void drawScene(GLFWwindow *window) {
     sp->setUniform("M", model);
     trackModel->Draw(*sp);
 
-    carShader->use();
-    carShader->setUniform("V", view);
-    carShader->setUniform("P", projection);
+    // carShader->use();
+    sp->setUniform("V", view);
+    sp->setUniform("P", projection);
 
     // Draw chassis
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
-        const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
-        drawCube(chassisTrans, config.chassisHalfExtents);
+        // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
+        const auto vehicleModel = vehicle->getModel();
 
+        btScalar btMatrix[16];
+        vehicle->getBtVehicle()->getChassisWorldTransform().getOpenGLMatrix(btMatrix);
+        glm::mat4 modelMatrix = glm::make_mat4(btMatrix);
+        sp->setUniform("M", modelMatrix);
+
+        vehicleModel->Draw(*sp);
+
+        carShader->use();
+        carShader->setUniform("V", view);
+        carShader->setUniform("P", projection);
         for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
             drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
         }
@@ -318,6 +328,9 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     trackModel = new Model("spielberg.glb", true);
     sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
     carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
@@ -341,6 +354,15 @@ int main() {
         vertexOffset += mesh.vertices.size();
     }
 
+    const auto vehicleModel = std::make_shared<Model>("skyline.glb", true,
+                                                      aiProcess_Triangulate |
+                                                      aiProcess_PreTransformVertices |
+                                                      aiProcess_JoinIdenticalVertices |
+                                                      aiProcess_ImproveCacheLocality |
+                                                      aiProcess_GenSmoothNormals |
+                                                      aiProcess_SortByPType
+    );
+
     setupCubeGeometry();
     setupWheelGeometry();
 
@@ -350,10 +372,11 @@ int main() {
     const VehicleConfig defaultConfig;
     defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
 
-    playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig);
+    playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
+        // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
 
         processInput(window);
         processVehicleInputs(window, playerVehicle, deltaTime);

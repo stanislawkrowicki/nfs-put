@@ -20,8 +20,8 @@ public:
     VehicleManager &operator=(VehicleManager &&) = delete;
 
 
-    std::shared_ptr<Vehicle> createVehicle(const VehicleConfig &config) {
-        const auto vehicle = std::make_shared<Vehicle>(config);
+    std::shared_ptr<Vehicle> createVehicle(const VehicleConfig &config, std::shared_ptr<Model> vehicleModel) {
+        const auto vehicle = std::make_shared<Vehicle>(config, vehicleModel);
         vehicles.push_back(vehicle);
         vehicle->addToWorld();
         return vehicle;
