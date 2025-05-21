@@ -3,6 +3,8 @@
 #include <iostream>
 #include <utility>
 
+#include "glm/gtc/type_ptr.hpp"
+
 void Vehicle::createBtVehicle() {
     auto boxShape = new btBoxShape(config.chassisHalfExtents);
 
@@ -10,10 +12,21 @@ void Vehicle::createBtVehicle() {
 
     btTransform massTransform;
     massTransform.setIdentity();
-    /* By default, the  center of mass is in the middle, so we move it down */
-    massTransform.setOrigin(btVector3(0, -0.1f, 0));
+    /* By raising the boxShape child up we lower the center of mass
+     * (the boxShape is higher  but center of mass stays the same) */
+    massTransform.setOrigin(btVector3(0, config.centerOfMassOffset, 0));
 
     chassisShape->addChildShape(massTransform, boxShape);
+
+    /* This part is taken from Bullet example.
+     * I don't know what it's supposed to do,
+     * but I feel like the car has more grip at the rear
+     * even though this support shape is on the front? */
+    const auto suppShape = new btBoxShape(btVector3(0.5f, 0.1f, 0.5f));
+    btTransform suppLocalTrans;
+    suppLocalTrans.setIdentity();
+    suppLocalTrans.setOrigin(btVector3(0, 1.0, 2.0));
+    chassisShape->addChildShape(suppLocalTrans, suppShape);
 
     btTransform chassisTransform;
     chassisTransform.setIdentity();
@@ -50,6 +63,13 @@ void Vehicle::createBtVehicle() {
         wheel.m_frictionSlip = config.frictionSlip;
         wheel.m_rollInfluence = config.rollInfluence;
     }
+}
+
+float Vehicle::calculateSteeringIncrement(const float speed) const {
+    return std::clamp(
+        config.maxSteeringIncrement - (config.maxSteeringIncrement * (speed / config.minSteeringAtSpeed) * 0.9f),
+        config.minSteeringIncrement,
+        config.maxSteeringIncrement);
 }
 
 Vehicle::Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel): config(std::move(config)) {
@@ -90,6 +110,14 @@ std::shared_ptr<Model> Vehicle::getModel() const {
     return model;
 }
 
+glm::mat4 Vehicle::getOpenGLModelMatrix() const {
+    btScalar btMatrix[16];
+    btVehicle->getChassisWorldTransform().getOpenGLMatrix(btMatrix);
+    glm::mat4 modelMatrix = glm::make_mat4(btMatrix);
+    modelMatrix = glm::translate(modelMatrix, glm::vec3(0.0f, config.centerOfMassOffset, 0.0f));
+    return modelMatrix;
+}
+
 void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,
                              const bool right, const float dt) const {
     float appliedEngineForce = 0.0f;
@@ -117,7 +145,8 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     /** See config.steeringIncrement comment */
     constexpr float steeringMultiplicationFactor = 60;
 
-    const auto steeringDelta = config.steeringIncrement * steeringMultiplicationFactor * dt;
+    const auto currentSpeed = abs(btVehicle->getCurrentSpeedKmHour());
+    const auto steeringDelta = calculateSteeringIncrement(currentSpeed) * steeringMultiplicationFactor * dt;
 
     if (left) {
         steering += steeringDelta;
@@ -126,8 +155,10 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
         steering -= steeringDelta;
         steering = std::max(steering, -config.maxSteeringAngle);
     } else {
-        steering *= 0.9f;
-        if (steering < 0.05f)
+        const float strength = std::clamp(10.0f + 0.2f * currentSpeed, 10.0f, 30.0f);
+        steering *= std::exp(-strength * dt);
+
+        if (std::abs(steering) < 0.01f)
             steering = 0;
     }
 

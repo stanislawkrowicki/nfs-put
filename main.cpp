@@ -176,8 +176,8 @@ int wheelVertexCount = 0;
 
 void setupWheelGeometry(int segments = 24) {
     std::vector<float> vertices;
-    float radius = 0.5f;
-    float halfLength = 0.1f; // wheel width
+    float radius = 0.9f;
+    float halfLength = 0.15f; // wheel width
 
     for (int i = 0; i <= segments; ++i) {
         float theta = 2.0f * M_PI * i / segments;
@@ -265,9 +265,7 @@ void drawScene(GLFWwindow *window) {
         // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
         const auto vehicleModel = vehicle->getModel();
 
-        btScalar btMatrix[16];
-        vehicle->getBtVehicle()->getChassisWorldTransform().getOpenGLMatrix(btMatrix);
-        glm::mat4 modelMatrix = glm::make_mat4(btMatrix);
+        glm::mat4 modelMatrix = vehicle->getOpenGLModelMatrix();
         sp->setUniform("M", modelMatrix);
 
         vehicleModel->Draw(*sp);

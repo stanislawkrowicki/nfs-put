@@ -18,6 +18,8 @@ class Vehicle {
 
     void createBtVehicle();
 
+    float calculateSteeringIncrement(float speed) const;
+
 public:
     explicit Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel);
 
@@ -36,6 +38,8 @@ public:
 
     [[nodiscard]]
     std::shared_ptr<Model> getModel() const;
+
+    glm::mat4 getOpenGLModelMatrix() const;
 
     void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
 };
