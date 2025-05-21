@@ -35,6 +35,8 @@ bool   firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+std::shared_ptr<Vehicle> playerVehicle;
+
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
 
@@ -42,6 +44,11 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) camera.ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, const int action, const int mods) {
+    if (key == GLFW_KEY_V && action == GLFW_PRESS)
+        camera.setNextCameraMode();
 }
 
 void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
@@ -191,6 +198,14 @@ void drawScene(GLFWwindow *window) {
     // don't forget to enable shader before setting uniforms
     sp->use();
 
+    const auto chassisOrigin = playerVehicle->getBtVehicle()->getChassisWorldTransform().getOrigin();
+    const auto vehPos = new glm::vec3();
+    vehPos->x = chassisOrigin.getX();
+    vehPos->y = chassisOrigin.getY();
+    vehPos->z = chassisOrigin.getZ();
+
+    camera.updateCamera(*vehPos);
+
     // view/projection transformations
     glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), 800.0f / 600.0f, 0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
@@ -241,6 +256,7 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, processKeyCallbacks);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -287,13 +303,13 @@ int main() {
     const VehicleConfig defaultConfig;
     defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
 
-    const auto vehicle = VehicleManager::getInstance().createVehicle(defaultConfig);
+    playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig);
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
 
         processInput(window);
-        processVehicleInputs(window, vehicle, deltaTime);
+        processVehicleInputs(window, playerVehicle, deltaTime);
 
         drawScene(window);
         glfwSwapBuffers(window);

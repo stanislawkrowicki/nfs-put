@@ -12,17 +12,26 @@ enum Camera_Movement {
 };
 
 /* Defines several camera modes */
+/* TODO: If we want to add more camera modes
+ * we should go and create a CameraSteeringInput abstract class that implements
+ * different reactions depending on selected mode
+ * We will omit that for now as the deadline is tight */
 enum Camera_Mode {
-    FREE_ROAM
+    FREE_ROAM,
+    FOLLOW,
+
+    /* Keep this last!!! Used to get enum length, not a mode */
+    INTERNAL_COUNTER
 };
 
 /* Default camera settings */
 constexpr float       YAW = -90.0f;
 constexpr float       PITCH = 0.0f;
 constexpr float       SPEED = 25.0f;
-constexpr float       SENSITIVITY = 0.1f;
+constexpr float       SENSITIVITY = 0.07f;
 constexpr float       ZOOM = 45.0f;
-constexpr Camera_Mode MODE = FREE_ROAM;
+constexpr float       FOLLOW_DISTANCE = 10.0f;
+constexpr Camera_Mode MODE = FOLLOW;
 
 class Camera {
     /* Camera Attributes */
@@ -40,6 +49,7 @@ class Camera {
     float       MovementSpeed;
     float       MouseSensitivity;
     float       Zoom;
+    float       FollowDistance;
     Camera_Mode Mode;
 
   public:
@@ -53,14 +63,22 @@ class Camera {
     [[nodiscard]]
     glm::mat4 GetViewMatrix() const;
 
+    /* Works only in FREE_ROAM mode */
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+
     void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
     void ProcessMouseScroll(float yOffset);
-    void setCameraMode(Camera_Mode mode);
 
+    void updateCamera(const glm::vec3 &vehiclePosition);
+
+    void setNextCameraMode();
+
+    void setCameraMode(Camera_Mode mode);
     [[nodiscard]]
     float getZoom() const;
 
   private:
     void updateCameraVectors();
+
+    void calculateFollowPositions(const glm::vec3 &vehiclePosition);
 };
