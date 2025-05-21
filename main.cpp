@@ -47,8 +47,8 @@ void processInput(GLFWwindow *window) {
 }
 
 void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, const int action, const int mods) {
-    if (key == GLFW_KEY_V && action == GLFW_PRESS)
-        camera.setNextCameraMode();
+    if (key == GLFW_KEY_V && action == GLFW_PRESS) camera.setNextCameraMode();
+    if (key == GLFW_KEY_F6 && action == GLFW_PRESS) Physics::getInstance().getDebugDrawer()->toggle();
 }
 
 void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
@@ -232,6 +232,11 @@ void drawScene(GLFWwindow *window) {
             drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
         }
     }
+
+    const auto debugDrawer = Physics::getInstance().getDebugDrawer();
+
+    if (debugDrawer->isEnabled())
+        debugDrawer->draw(projection * view * model);
 }
 
 int main() {

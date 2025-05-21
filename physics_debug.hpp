@@ -28,6 +28,8 @@ public:
 
     void disable();
 
+    void toggle();
+
     void clear();
 
     void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime,

@@ -31,6 +31,10 @@ void DebugDrawer::disable() {
     enabled = false;
 }
 
+void DebugDrawer::toggle() {
+    enabled = !enabled;
+}
+
 void DebugDrawer::clear() {
     lineVertices.clear();
 }
