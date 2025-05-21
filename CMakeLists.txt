@@ -82,5 +82,7 @@ endif()
 
 set(MODELS_DIR "${CMAKE_SOURCE_DIR}/models/")
 set(SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders/")
+set(SKYBOX_DIR "${CMAKE_SOURCE_DIR}/skybox/")
 add_definitions(-DMODELS_PATH="${MODELS_DIR}")
 add_definitions(-DSHADERS_PATH="${SHADERS_DIR}")
+add_definitions(-DSKYBOX_PATH="${SKYBOX_DIR}")

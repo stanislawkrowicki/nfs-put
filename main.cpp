@@ -22,6 +22,41 @@
 
 Shader *sp;
 Shader *carShader;
+Shader *trackShader;
+Shader *skyboxShader;
+
+unsigned int cubemapTexture;
+unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
+
+float skyboxVertices[] = {
+    -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+
+    -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+    -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+
+    1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+
+    -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f
+};
+
+
+unsigned int skyboxIndices[] = {
+    0, 1, 2, 2, 3, 0, // back
+    4, 5, 6, 6, 7, 4, // front
+    4, 5, 1, 1, 0, 4, // left
+    3, 2, 6, 6, 7, 3, // right
+    4, 0, 3, 3, 7, 4, // top
+    1, 5, 6, 6, 2, 1
+}; //bottom
 
 void errorCallback(int error, const char *description) { fputs(description, stderr); }
 
@@ -227,11 +262,10 @@ void drawScene(GLFWwindow *window) {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-    glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    processInput(window);
 
-    // don't forget to enable shader before setting uniforms
-    sp->use();
+    glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const auto chassisOrigin = playerVehicle->getBtVehicle()->getChassisWorldTransform().getOrigin();
     const auto vehPos = new glm::vec3();
@@ -243,19 +277,44 @@ void drawScene(GLFWwindow *window) {
 
     // view/projection transformations
     const auto aspectRatio = currentWindowWidth / currentWindowHeight;
-    glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
-                                            0.1f, 1000.0f);
-    glm::mat4 view = camera.GetViewMatrix();
+    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
+                                                  0.1f, 1000.0f);
+    const glm::mat4 view = camera.GetViewMatrix();
 
-    sp->setUniform("P", projection);
-    sp->setUniform("V", view);
-    // render the loaded model
-    auto model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-    sp->setUniform("M", model);
-    trackModel->Draw(*sp);
 
-    // carShader->use();
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+
+    skyboxShader->use();
+    skyboxShader->setUniform("skybox", 0);
+    const auto skyboxView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+    skyboxShader->setUniform("V", skyboxView);
+    skyboxShader->setUniform("P", projection);
+
+    glBindVertexArray(skyboxVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    skyboxShader->setUniform("skybox", 0);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    trackShader->use();
+
+    constexpr auto model = glm::mat4(1.0f);
+    trackShader->setUniform("P", projection);
+    trackShader->setUniform("V", view);
+    trackShader->setUniform("M", model);
+
+    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.90f));
+    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 50.0f, 20.0f));
+    trackShader->setUniform("u_camPos", glm::vec3(0.0f, 5.0f, 10.0f));
+    glActiveTexture(GL_TEXTURE0);
+    trackShader->setUniform("texture_diffuse1", 0);
+    trackModel->Draw(*trackShader);
+
+    sp->use();
     sp->setUniform("V", view);
     sp->setUniform("P", projection);
 
@@ -325,15 +384,16 @@ int main() {
     }
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     trackModel = new Model("spielberg.glb", true);
     sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
+    trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    skyboxShader = new Shader("skybox_vert.glsl", nullptr, "skybox_frag.glsl");
 
     auto meshes = trackModel->getMeshes();
 
@@ -371,6 +431,62 @@ int main() {
     defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
+
+    // skybox
+    glGenVertexArrays(1, &skyboxVAO);
+    glBindVertexArray(skyboxVAO);
+
+    // Setup VBO
+    glGenBuffers(1, &skyboxVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+    // Setup EBO
+    glGenBuffers(1, &skyboxEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), skyboxIndices, GL_STATIC_DRAW);
+
+    // Vertex attribute pointer
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+
+    // Unbind
+    glBindVertexArray(0);
+
+    const std::string facesCubemap[6] = {
+        "right.png",
+        "left.png",
+        "top.png",
+        "bottom.png",
+        "front.png",
+        "back.png"
+    };
+
+    glGenTextures(1, &cubemapTexture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+
+    stbi_set_flip_vertically_on_load(false);
+    for (unsigned int i = 0; i < 6; i++) {
+        int width, height, nrChannels;
+        std::cout << std::string(SKYBOX_PATH) + facesCubemap[i] << std::endl;
+        const auto data = stbi_load((std::string(SKYBOX_PATH) + facesCubemap[i]).c_str(), &width, &height, &nrChannels,
+                                    0);
+        if (data) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                         data);
+            stbi_image_free(data);
+        } else {
+            std::cout << "Failed to load sky texture: " << stbi_failure_reason() << std::endl;
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
