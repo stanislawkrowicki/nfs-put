@@ -12,6 +12,8 @@ struct WheelPlacement {
 struct VehicleConfig {
     /* General */
     mutable std::string name = "Vehicle";
+    mutable bool isPlayerVehicle = true;
+
     mutable btVector3 position = {0, 2, 0};
     mutable btQuaternion rotation = btQuaternion::getIdentity();
 

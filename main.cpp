@@ -20,6 +20,7 @@
 #include "vehicle_manager.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "skybox.hpp"
+#include "opponent_path.hpp"
 
 Shader *sp;
 Shader *carShader;
@@ -38,6 +39,8 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 std::shared_ptr<Vehicle> playerVehicle;
+std::shared_ptr<Vehicle> opponentVehicle;
+OpponentPathGenerator *pathGenerator;
 
 /* Switching between windowed and fullscreen */
 constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
@@ -82,6 +85,9 @@ void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, 
     if (key == GLFW_KEY_V && action == GLFW_PRESS) camera.setNextCameraMode();
     if (key == GLFW_KEY_F6 && action == GLFW_PRESS) Physics::getInstance().getDebugDrawer()->toggle();
     if (key == GLFW_KEY_F11 && action == GLFW_PRESS) toggleFullscreen(window);
+    if (key == GLFW_KEY_X && action == GLFW_PRESS) pathGenerator->addWaypointFromVehicle(playerVehicle);
+    if (key == GLFW_KEY_F10 && action == GLFW_PRESS)
+        pathGenerator->saveWaypointsToFile("paths.json");
 }
 
 void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
@@ -264,10 +270,6 @@ void drawScene(GLFWwindow *window) {
     trackShader->setUniform("texture_diffuse1", 0);
     trackModel->Draw(*trackShader);
 
-    sp->use();
-    sp->setUniform("V", view);
-    sp->setUniform("P", projection);
-
     // Draw chassis
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
@@ -275,6 +277,11 @@ void drawScene(GLFWwindow *window) {
         const auto vehicleModel = vehicle->getModel();
 
         glm::mat4 modelMatrix = vehicle->getOpenGLModelMatrix();
+
+        sp->use();
+        sp->setUniform("V", view);
+        sp->setUniform("P", projection);
+
         sp->setUniform("M", modelMatrix);
 
         vehicleModel->Draw(*sp);
@@ -388,7 +395,14 @@ int main() {
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
+    const VehicleConfig opponentConfig;
+    opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
+    opponentConfig.isPlayerVehicle = false;
+
+    opponentVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
     Skybox::init();
+
+    pathGenerator = new OpponentPathGenerator();
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
