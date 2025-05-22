@@ -303,6 +303,8 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glfwWindowHint(GLFW_DEPTH_BITS, 32);
+
     glfwSetErrorCallback(errorCallback);
     GLFWwindow *window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "NFS PUT", nullptr, nullptr);
     if (!window) {
@@ -338,6 +340,11 @@ int main() {
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    /* If we add windows to vehicle model or anything needing two-sided rendering
+     * this needs to be disabled before drawing them */
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     trackModel = new Model("spielberg.glb", true);
     sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
@@ -391,14 +398,19 @@ int main() {
         processVehicleInputs(window, playerVehicle, deltaTime);
 
         drawScene(window);
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
-    delete trackModel;
-
-    exit(EXIT_SUCCESS);
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 }
+
+glfwDestroyWindow(window);
+glfwTerminate();
+
+delete trackModel;
+
+exit(EXIT_SUCCESS);
+}
+
+
+
+
+
