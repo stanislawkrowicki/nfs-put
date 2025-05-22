@@ -398,16 +398,16 @@ int main() {
         processVehicleInputs(window, playerVehicle, deltaTime);
 
         drawScene(window);
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-}
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 
-glfwDestroyWindow(window);
-glfwTerminate();
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
-delete trackModel;
+    delete trackModel;
 
-exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }
 
 

@@ -61,7 +61,6 @@ class Skybox {
                 glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE,
                              data);
                 stbi_image_free(data);
-                std::cout << "Got texture " << std::string(SKYBOX_PATH) + SkyboxData::facesCubemap[i] << std::endl;
             } else {
                 std::cerr << "Failed to load sky texture: " << stbi_failure_reason() << std::endl;
                 stbi_image_free(data);
