@@ -12,9 +12,9 @@ void OpponentPathGenerator::addWaypoint(const glm::vec3 &waypoint) {
 }
 
 void OpponentPathGenerator::addWaypointFromVehicle(const std::shared_ptr<Vehicle> &vehicle) {
-    const auto pos = vehicle->getOpenGLModelMatrix()[0];
+    const auto pos = vehicle->getPosition();
     std::cout << "Added waypoint " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-    waypoints.emplace_back(pos.x, pos.y, pos.z);
+    waypoints.push_back(pos);
 }
 
 std::vector<glm::vec3> OpponentPathGenerator::getWaypoints() {
@@ -55,4 +55,56 @@ void OpponentPathGenerator::saveWaypointsToFile(const std::string &filename) {
     std::cout << "Appended new waypoint path to " << filename << std::endl;
 
     waypoints.clear();
+}
+
+std::vector<glm::vec3> OpponentPathGenerator::getRandomPathFromFile(const std::string &filename) {
+    using json = nlohmann::json;
+    std::vector<glm::vec3> path;
+
+    const std::string file = std::string(SOURCE_PATH) + "/" + filename;
+
+    if (!std::filesystem::exists(file)) {
+        std::cerr << "getRandomPathFromFile: File does not exist: " << filename << '\n';
+        return path;
+    }
+
+    std::ifstream infile(file);
+    if (!infile) {
+        std::cerr << "getRandomPathFromFile: Failed to open file: " << filename << '\n';
+        return path;
+    }
+
+    json data;
+    try {
+        infile >> data;
+    } catch (const std::exception &e) {
+        std::cerr << "getRandomPathFromFile: Failed to parse JSON: " << e.what() << '\n';
+        return path;
+    }
+
+    if (!data.contains("paths") || !data["paths"].is_array() || data["paths"].empty()) {
+        std::cerr << "getRandomPathFromFile: No valid paths found in file.\n";
+        return path;
+    }
+
+    // Pick a random path
+    size_t randomIndex = rand() % data["paths"].size();
+    const auto &jsonPath = data["paths"][randomIndex];
+
+    if (!jsonPath.is_array()) {
+        std::cerr << "getRandomPathFromFile: Selected path is not an array.\n";
+        return path;
+    }
+
+    for (const auto &wp: jsonPath) {
+        if (wp.is_array() && wp.size() == 3) {
+            std::cout << "Adding waypoint " << wp[0].get<float>() << " " << wp[1].get<float>() << " " << wp[2].get<
+                float>() << std::endl;
+            path.emplace_back(wp[0].get<float>(), wp[1].get<float>(), wp[2].get<float>());
+        } else {
+            std::cerr << "getRandomPathFromFile: Malformed waypoint found.\n";
+        }
+    }
+
+    return path;
 }

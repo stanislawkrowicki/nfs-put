@@ -41,5 +41,11 @@ public:
 
     glm::mat4 getOpenGLModelMatrix() const;
 
+    glm::vec3 getPosition() const;
+
+
     void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
+
+    /* Simplified version of updateControls for AI controllers */
+    void aiUpdateControls(bool forward, bool backward, bool left, bool right) const;
 };

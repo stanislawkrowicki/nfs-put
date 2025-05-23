@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 
+#include "opponent.hpp"
 #include "physics.hpp"
 #include "physics_debug.hpp"
 #include "vehicle.hpp"
@@ -41,6 +42,7 @@ float lastFrame = 0.0f;
 std::shared_ptr<Vehicle> playerVehicle;
 std::shared_ptr<Vehicle> opponentVehicle;
 OpponentPathGenerator *pathGenerator;
+Opponent *opponent;
 
 /* Switching between windowed and fullscreen */
 constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
@@ -179,6 +181,23 @@ void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     glBindVertexArray(0);
 }
 
+void drawWaypoint(const glm::vec3 &position, const Shader *shader) {
+    constexpr auto halfExtents = glm::vec3(0.5, 0.5, 0.5);
+
+    auto model = glm::mat4(1.0);
+    model = glm::translate(model, position);
+    model = glm::scale(model, halfExtents * 2.0f);
+
+    /* Needs to be already in use with specified V and P matrices! */
+    // shader->use();
+
+    shader->setUniform("M", model);
+    shader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
+    glBindVertexArray(0);
+}
+
 GLuint wheelVAO = 0, wheelVBO = 0;
 int wheelVertexCount = 0;
 
@@ -298,6 +317,13 @@ void drawScene(GLFWwindow *window) {
 
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
+
+    carShader->use();
+    carShader->setUniform("V", view);
+    carShader->setUniform("P", projection);
+    for (const auto &waypoint: opponent->waypoints) {
+        drawWaypoint(waypoint, carShader);
+    }
 }
 
 int main() {
@@ -398,11 +424,21 @@ int main() {
     const VehicleConfig opponentConfig;
     opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
     opponentConfig.isPlayerVehicle = false;
+    opponentConfig.engineForce /= 1.0;
+    opponentConfig.brakingForce *= 0.4;
+    // opponentConfig.rollInfluence /= 10.0;
+    opponentConfig.frictionSlip = 20.0f;
+    opponentConfig.maxSteeringAngle *= 0.8;
+    // opponentConfig.centerOfMassOffset *= 2.0f;
 
-    opponentVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
+
+    opponentVehicle = VehicleManager::getInstance().createVehicle(opponentConfig, vehicleModel);
     Skybox::init();
 
     pathGenerator = new OpponentPathGenerator();
+    const auto path = OpponentPathGenerator::getRandomPathFromFile("paths.json");
+
+    opponent = new Opponent(opponentVehicle, path);
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
@@ -410,6 +446,8 @@ int main() {
 
         processInput(window);
         processVehicleInputs(window, playerVehicle, deltaTime);
+
+        opponent->updateSteering();
 
         drawScene(window);
         glfwSwapBuffers(window);

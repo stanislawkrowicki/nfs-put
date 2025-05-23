@@ -18,6 +18,8 @@ public:
     std::vector<glm::vec3> getWaypoints();
 
     void saveWaypointsToFile(const std::string &filename);
+
+    static std::vector<glm::vec3> getRandomPathFromFile(const std::string &filename);
 };
 
 class OpponentPath {

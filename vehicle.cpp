@@ -118,6 +118,11 @@ glm::mat4 Vehicle::getOpenGLModelMatrix() const {
     return modelMatrix;
 }
 
+glm::vec3 Vehicle::getPosition() const {
+    const auto pos = getOpenGLModelMatrix()[3];
+    return {pos.x, pos.y, pos.z};
+}
+
 void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,
                              const bool right, const float dt) const {
     float appliedEngineForce = 0.0f;
@@ -164,5 +169,37 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
 
     btVehicle->setSteeringValue(steering, 0); // Front left
     btVehicle->setSteeringValue(steering, 1); // Front right;
+}
+
+void Vehicle::aiUpdateControls(const bool forward, const bool backward, const bool left, const bool right) const {
+    float appliedEngineForce = 0.0f;
+    float appliedBrakeForce = 0.0f;
+
+    if (forward)
+        appliedEngineForce = config.engineForce;
+
+    if (backward) {
+        appliedEngineForce = -config.brakingForce;
+    }
+
+    btVehicle->applyEngineForce(appliedEngineForce, 0);
+    btVehicle->applyEngineForce(appliedEngineForce, 1);
+    btVehicle->applyEngineForce(appliedEngineForce, 2);
+    btVehicle->applyEngineForce(appliedEngineForce, 3);
+
+    // btVehicle->setBrake(appliedBrakeForce, 0);
+    // btVehicle->setBrake(appliedBrakeForce, 1);
+    // btVehicle->setBrake(appliedBrakeForce, 2);
+    // btVehicle->setBrake(appliedBrakeForce, 3);
+
+    float steering = 0.0f;
+
+    if (left)
+        steering = config.maxSteeringAngle;
+    else if (right)
+        steering = -config.maxSteeringAngle;
+
+    btVehicle->setSteeringValue(steering, 0);
+    btVehicle->setSteeringValue(steering, 1);
 }
 
