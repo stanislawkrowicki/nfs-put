@@ -424,11 +424,12 @@ int main() {
     const VehicleConfig opponentConfig;
     opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
     opponentConfig.isPlayerVehicle = false;
-    opponentConfig.engineForce /= 1.0;
+    opponentConfig.engineForce /= 3.0f;
     opponentConfig.brakingForce *= 0.4;
     // opponentConfig.rollInfluence /= 10.0;
     opponentConfig.frictionSlip = 20.0f;
     opponentConfig.maxSteeringAngle *= 0.8;
+    opponentConfig.boostStrength *= 1.4;
     // opponentConfig.centerOfMassOffset *= 2.0f;
 
 

@@ -72,6 +72,14 @@ float Vehicle::calculateSteeringIncrement(const float speed) const {
         config.maxSteeringIncrement);
 }
 
+float Vehicle::getEngineBoost() const {
+    const float normalizedSpeed = glm::clamp(std::abs(btVehicle->getCurrentSpeedKmHour()) / config.boostMaxSpeed,
+                                             0.0f, 1.0f);
+    const float boost = config.boostStrength * expf(-config.boostFalloffRate * normalizedSpeed);
+
+    return 1.0f + boost;
+}
+
 Vehicle::Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel): config(std::move(config)) {
     dynamicsWorld = Physics::getInstance().getDynamicsWorld();
     model = std::move(vehicleModel);
@@ -128,9 +136,10 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     float appliedEngineForce = 0.0f;
     float appliedHandbrakeForce = 0.0f;
 
-    if (forward)
+    if (forward) {
         appliedEngineForce = config.engineForce;
-
+        appliedEngineForce *= getEngineBoost();
+    }
     if (backward) {
         appliedEngineForce = -config.brakingForce;
     }
@@ -171,12 +180,14 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     btVehicle->setSteeringValue(steering, 1); // Front right;
 }
 
-void Vehicle::aiUpdateControls(const bool forward, const bool backward, const bool left, const bool right) const {
+void Vehicle::aiUpdateControls(const bool forward, const bool backward, const float steering) const {
     float appliedEngineForce = 0.0f;
     float appliedBrakeForce = 0.0f;
 
-    if (forward)
+    if (forward) {
         appliedEngineForce = config.engineForce;
+        appliedEngineForce *= getEngineBoost();
+    }
 
     if (backward) {
         appliedEngineForce = -config.brakingForce;
@@ -192,14 +203,12 @@ void Vehicle::aiUpdateControls(const bool forward, const bool backward, const bo
     // btVehicle->setBrake(appliedBrakeForce, 2);
     // btVehicle->setBrake(appliedBrakeForce, 3);
 
-    float steering = 0.0f;
+    float clampedSteering = steering;
+    if (std::abs(clampedSteering) < 0.01f)
+        clampedSteering = 0.0f;
+    else
+        clampedSteering = std::clamp(steering, -config.maxSteeringAngle, config.maxSteeringAngle);
 
-    if (left)
-        steering = config.maxSteeringAngle;
-    else if (right)
-        steering = -config.maxSteeringAngle;
-
-    btVehicle->setSteeringValue(steering, 0);
-    btVehicle->setSteeringValue(steering, 1);
+    btVehicle->setSteeringValue(clampedSteering, 0);
+    btVehicle->setSteeringValue(clampedSteering, 1);
 }
-

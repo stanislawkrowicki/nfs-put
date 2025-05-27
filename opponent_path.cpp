@@ -87,7 +87,6 @@ std::vector<glm::vec3> OpponentPathGenerator::getRandomPathFromFile(const std::s
         return path;
     }
 
-    // Pick a random path
     size_t randomIndex = rand() % data["paths"].size();
     const auto &jsonPath = data["paths"][randomIndex];
 
@@ -98,8 +97,6 @@ std::vector<glm::vec3> OpponentPathGenerator::getRandomPathFromFile(const std::s
 
     for (const auto &wp: jsonPath) {
         if (wp.is_array() && wp.size() == 3) {
-            std::cout << "Adding waypoint " << wp[0].get<float>() << " " << wp[1].get<float>() << " " << wp[2].get<
-                float>() << std::endl;
             path.emplace_back(wp[0].get<float>(), wp[1].get<float>(), wp[2].get<float>());
         } else {
             std::cerr << "getRandomPathFromFile: Malformed waypoint found.\n";

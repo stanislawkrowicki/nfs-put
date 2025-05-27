@@ -20,6 +20,10 @@ class Vehicle {
 
     float calculateSteeringIncrement(float speed) const;
 
+    [[nodiscard]]
+    /* Bigger boost at low speeds; no boost at higher speed */
+    float getEngineBoost() const;
+
 public:
     explicit Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel);
 
@@ -39,13 +43,20 @@ public:
     [[nodiscard]]
     std::shared_ptr<Model> getModel() const;
 
+    [[nodiscard]]
     glm::mat4 getOpenGLModelMatrix() const;
 
+    [[nodiscard]]
     glm::vec3 getPosition() const;
 
 
     void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
 
-    /* Simplified version of updateControls for AI controllers */
-    void aiUpdateControls(bool forward, bool backward, bool left, bool right) const;
+    /**
+     * Analog version of updateControls for precise AI steering
+     * @param forward bool
+     * @param backward bool
+     * @param steering float, wheels turning angle in radians
+     */
+    void aiUpdateControls(bool forward, bool backward, float steering) const;
 };
