@@ -1,6 +1,6 @@
 #include "camera.hpp"
 
-#include <bits/stl_algo.h>
+#include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)

@@ -74,12 +74,17 @@ add_executable(nfsput main.cpp shader.cpp
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath)
 target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} ${bullet_SOURCE_DIR}/src .)
 
-if(UNIX)
-    find_package(OpenGL REQUIRED)
-    find_package(GLEW REQUIRED)
-    target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW)
-endif()
+if(WIN32)
+    # OpenGL
+    target_link_libraries(nfsput PRIVATE opengl32 gdi32)
 
+    # GLEW
+    set(GLEW_INCLUDE_DIR "C:/Users/marha/Documents/studia/semestr 4/grafika/projekt/glew-2.1.0/include")
+    set(GLEW_LIBRARY "C:/Users/marha/Documents/studia/semestr 4/grafika/projekt/glew-2.1.0/lib/Release/x64/glew32.lib")
+
+    target_include_directories(nfsput PRIVATE ${GLEW_INCLUDE_DIR})
+    target_link_libraries(nfsput PRIVATE ${GLEW_LIBRARY})
+endif()
 set(MODELS_DIR "${CMAKE_SOURCE_DIR}/models/")
 set(SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders/")
 add_definitions(-DMODELS_PATH="${MODELS_DIR}")

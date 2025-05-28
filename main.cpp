@@ -180,7 +180,7 @@ void setupWheelGeometry(int segments = 24) {
     float halfLength = 0.15f; // wheel width
 
     for (int i = 0; i <= segments; ++i) {
-        float theta = 2.0f * M_PI * i / segments;
+        float theta = 2.0f * 3.14 * i / segments;
         float x = cos(theta) * radius;
         float y = sin(theta) * radius;
 
