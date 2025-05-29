@@ -19,9 +19,11 @@
 #include "vehicle.hpp"
 #include "vehicle_manager.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "skybox.hpp"
 
 Shader *sp;
 Shader *carShader;
+Shader *trackShader;
 
 void errorCallback(int error, const char *description) { fputs(description, stderr); }
 
@@ -226,12 +228,11 @@ void drawScene(GLFWwindow *window) {
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
+    if (deltaTime > 0.1f) deltaTime = 0.1f;
+    processInput(window);
 
-    glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+    glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // don't forget to enable shader before setting uniforms
-    sp->use();
 
     const auto chassisOrigin = playerVehicle->getBtVehicle()->getChassisWorldTransform().getOrigin();
     const auto vehPos = new glm::vec3();
@@ -239,23 +240,41 @@ void drawScene(GLFWwindow *window) {
     vehPos->y = chassisOrigin.getY();
     vehPos->z = chassisOrigin.getZ();
 
-    camera.updateCamera(*vehPos);
+    btTransform transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
+    btMatrix3x3 rotMatrix = transform.getBasis();
+
+    //Car has different Y and Z axis
+    float vehYaw = atan2(rotMatrix[0][0], rotMatrix[0][2]);
+    vehYaw = glm::degrees(vehYaw);
+
+    btVector3 linearVelocity = playerVehicle->getBtVehicle()->getRigidBody()->getLinearVelocity();
+    float vehicleSpeed = linearVelocity.length();
+
+    camera.updateCamera(*vehPos, vehYaw, vehicleSpeed);
 
     // view/projection transformations
     const auto aspectRatio = currentWindowWidth / currentWindowHeight;
-    glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
-                                            0.1f, 1000.0f);
-    glm::mat4 view = camera.GetViewMatrix();
+    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
+                                                  0.1f, 1000.0f);
+    const glm::mat4 view = camera.GetViewMatrix();
 
-    sp->setUniform("P", projection);
-    sp->setUniform("V", view);
-    // render the loaded model
-    auto model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-    sp->setUniform("M", model);
-    trackModel->Draw(*sp);
+    Skybox::draw(view, projection);
 
-    // carShader->use();
+    trackShader->use();
+
+    constexpr auto model = glm::mat4(1.0f);
+    trackShader->setUniform("P", projection);
+    trackShader->setUniform("V", view);
+    trackShader->setUniform("M", model);
+
+    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.90f));
+    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 50.0f, 20.0f));
+    trackShader->setUniform("u_camPos", glm::vec3(0.0f, 5.0f, 10.0f));
+    glActiveTexture(GL_TEXTURE0);
+    trackShader->setUniform("texture_diffuse1", 0);
+    trackModel->Draw(*trackShader);
+
+    sp->use();
     sp->setUniform("V", view);
     sp->setUniform("P", projection);
 
@@ -294,6 +313,8 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glfwWindowHint(GLFW_DEPTH_BITS, 32);
+
     glfwSetErrorCallback(errorCallback);
     GLFWwindow *window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "NFS PUT", nullptr, nullptr);
     if (!window) {
@@ -325,15 +346,20 @@ int main() {
     }
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    /* If we add windows to vehicle model or anything needing two-sided rendering
+     * this needs to be disabled before drawing them */
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
     trackModel = new Model("spielberg.glb", true);
     sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
+    trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     auto meshes = trackModel->getMeshes();
 
@@ -372,6 +398,8 @@ int main() {
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
+    Skybox::init();
+
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
@@ -391,3 +419,8 @@ int main() {
 
     exit(EXIT_SUCCESS);
 }
+
+
+
+
+
