@@ -56,6 +56,15 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(bullet)
 
+FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.12.0
+)
+
+FetchContent_MakeAvailable(nlohmann_json)
+
+
 add_executable(nfsput main.cpp shader.cpp
         camera.hpp
         model.hpp
@@ -70,9 +79,13 @@ add_executable(nfsput main.cpp shader.cpp
         vehicle_config.hpp
         vehicle_manager.hpp
         skybox.hpp
+        opponent.hpp
+        opponent.cpp
+        opponent_path.hpp
+        opponent_path.cpp
 )
 
-target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath)
+target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)
 target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} ${bullet_SOURCE_DIR}/src .)
 
 if(WIN32)
@@ -92,3 +105,4 @@ set(SKYBOX_DIR "${CMAKE_SOURCE_DIR}/skybox/")
 add_definitions(-DMODELS_PATH="${MODELS_DIR}")
 add_definitions(-DSHADERS_PATH="${SHADERS_DIR}")
 add_definitions(-DSKYBOX_PATH="${SKYBOX_DIR}")
+add_definitions(-DSOURCE_PATH="${CMAKE_SOURCE_DIR}")

@@ -72,6 +72,14 @@ float Vehicle::calculateSteeringIncrement(const float speed) const {
         config.maxSteeringIncrement);
 }
 
+float Vehicle::getEngineBoost() const {
+    const float normalizedSpeed = glm::clamp(std::abs(btVehicle->getCurrentSpeedKmHour()) / config.boostMaxSpeed,
+                                             0.0f, 1.0f);
+    const float boost = config.boostStrength * expf(-config.boostFalloffRate * normalizedSpeed);
+
+    return 1.0f + boost;
+}
+
 Vehicle::Vehicle(VehicleConfig config, std::shared_ptr<Model> vehicleModel): config(std::move(config)) {
     dynamicsWorld = Physics::getInstance().getDynamicsWorld();
     model = std::move(vehicleModel);
@@ -118,14 +126,20 @@ glm::mat4 Vehicle::getOpenGLModelMatrix() const {
     return modelMatrix;
 }
 
+glm::vec3 Vehicle::getPosition() const {
+    const auto pos = getOpenGLModelMatrix()[3];
+    return {pos.x, pos.y, pos.z};
+}
+
 void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,
                              const bool right, const float dt) const {
     float appliedEngineForce = 0.0f;
     float appliedHandbrakeForce = 0.0f;
 
-    if (forward)
+    if (forward) {
         appliedEngineForce = config.engineForce;
-
+        appliedEngineForce *= getEngineBoost();
+    }
     if (backward) {
         appliedEngineForce = -config.brakingForce;
     }
@@ -166,3 +180,35 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     btVehicle->setSteeringValue(steering, 1); // Front right;
 }
 
+void Vehicle::aiUpdateControls(const bool forward, const bool backward, const float steering) const {
+    float appliedEngineForce = 0.0f;
+    float appliedBrakeForce = 0.0f;
+
+    if (forward) {
+        appliedEngineForce = config.engineForce;
+        appliedEngineForce *= getEngineBoost();
+    }
+
+    if (backward) {
+        appliedEngineForce = -config.brakingForce;
+    }
+
+    btVehicle->applyEngineForce(appliedEngineForce, 0);
+    btVehicle->applyEngineForce(appliedEngineForce, 1);
+    btVehicle->applyEngineForce(appliedEngineForce, 2);
+    btVehicle->applyEngineForce(appliedEngineForce, 3);
+
+    // btVehicle->setBrake(appliedBrakeForce, 0);
+    // btVehicle->setBrake(appliedBrakeForce, 1);
+    // btVehicle->setBrake(appliedBrakeForce, 2);
+    // btVehicle->setBrake(appliedBrakeForce, 3);
+
+    float clampedSteering = steering;
+    if (std::abs(clampedSteering) < 0.01f)
+        clampedSteering = 0.0f;
+    else
+        clampedSteering = std::clamp(steering, -config.maxSteeringAngle, config.maxSteeringAngle);
+
+    btVehicle->setSteeringValue(clampedSteering, 0);
+    btVehicle->setSteeringValue(clampedSteering, 1);
+}

@@ -12,6 +12,8 @@ struct WheelPlacement {
 struct VehicleConfig {
     /* General */
     mutable std::string name = "Vehicle";
+    mutable bool isPlayerVehicle = true;
+
     mutable btVector3 position = {0, 2, 0};
     mutable btQuaternion rotation = btQuaternion::getIdentity();
 
@@ -28,6 +30,14 @@ struct VehicleConfig {
     mutable float engineForce = 5000.0f;
     mutable float brakingForce = 20000.0f; // used as negative engineForce to simplify, we should change that
     mutable float handbrakeForce = 3000.0f;
+
+    /* Boost is an engine force multiplier at lower speeds so that
+    * the cars have more realistic acceleration */
+
+    /* Cutoff speed at which the engine force is no longer boosted */
+    mutable float boostMaxSpeed = 150.0f;
+    mutable float boostStrength = 1.0f;
+    mutable float boostFalloffRate = 3.0f;
 
     /* Suspension */
     mutable btScalar suspensionStiffness = 40;
