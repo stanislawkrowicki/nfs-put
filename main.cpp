@@ -436,10 +436,9 @@ int main() {
     opponentVehicle = VehicleManager::getInstance().createVehicle(opponentConfig, vehicleModel);
     Skybox::init();
 
-    pathGenerator = new OpponentPathGenerator();
-    const auto path = OpponentPathGenerator::getRandomPathFromFile("paths.json");
+    OpponentPathGenerator::getInstance().loadPathsToMemory("paths.json");
 
-    opponent = new Opponent(opponentVehicle, path);
+    opponent = new Opponent(opponentVehicle);
 
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);

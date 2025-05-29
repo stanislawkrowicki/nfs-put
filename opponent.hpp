@@ -9,6 +9,9 @@ constexpr float LOOKAHEAD_DISTANCE = 8.0f;
  * try to find intersection at */
 constexpr unsigned int LOOKAHEAD_WAYPOINTS_COUNT = 5;
 
+/* How many waypoints to traverse when looking for the closest one */
+constexpr unsigned int WAYPOINT_SEEK_DEPTH = 15;
+
 class Opponent {
     std::shared_ptr<Vehicle> vehicle;
 
@@ -19,11 +22,23 @@ class Opponent {
     [[nodiscard]]
     glm::vec3 findLookaheadPoint(const glm::vec3 &currentPos) const;
 
+    /* With some random chance changes the path that the AI is following */
+    void randomizePath();
+
+    [[nodiscard]]
+    unsigned int seekClosestBiggerWaypoint(const std::vector<glm::vec3> &newPath) const;
+
+    [[nodiscard]]
+    unsigned int seekClosestSmallerWaypoint(const std::vector<glm::vec3> &newPath) const;
+
+    void selectRandomNewPath();
+
 public:
     // explicit Opponent(const std::shared_ptr<Vehicle> &vehicle);
     std::vector<glm::vec3> waypoints;
 
-    Opponent(const std::shared_ptr<Vehicle> &vehicle, const std::vector<glm::vec3> &waypoints);
+    explicit Opponent(const std::shared_ptr<Vehicle> &vehicle);
 
     void updateSteering();
 };
+

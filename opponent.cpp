@@ -1,6 +1,8 @@
 #include "opponent.hpp"
 #include <iostream>
+#include <random>
 
+#include "opponent_path.hpp"
 #include "glm/detail/_noise.hpp"
 
 glm::vec3 Opponent::bezierPoint(const float t, const glm::vec3 &p0, const glm::vec3 &p1, const glm::vec3 &p2) {
@@ -8,8 +10,8 @@ glm::vec3 Opponent::bezierPoint(const float t, const glm::vec3 &p0, const glm::v
     return u * u * p0 + 2.0f * u * t * p1 + t * t * p2;
 }
 
-Opponent::Opponent(const std::shared_ptr<Vehicle> &vehicle, const std::vector<glm::vec3> &waypoints) : vehicle(vehicle),
-    waypoints(waypoints) {
+Opponent::Opponent(const std::shared_ptr<Vehicle> &vehicle) : vehicle(vehicle) {
+    waypoints = OpponentPathGenerator::getInstance().getRandomPathFromMemory();
 }
 
 glm::vec3 Opponent::findLookaheadPoint(const glm::vec3 &currentPos) const {
@@ -49,10 +51,103 @@ glm::vec3 Opponent::findLookaheadPoint(const glm::vec3 &currentPos) const {
     return waypoints[currentWaypoint];
 }
 
+void Opponent::randomizePath() {
+    constexpr float PATH_CHANGE_PROBABILITY = 0.1f;
+
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_real_distribution dist(0.0f, 1.0f);
+
+    if (dist(gen) > PATH_CHANGE_PROBABILITY)
+        return;
+
+    const auto path = OpponentPathGenerator::getRandomPathFromFile("paths.json");
+
+    const glm::vec3 newCurrWaypoint = path[currentWaypoint];
+    const auto modelMatrix = vehicle->getOpenGLModelMatrix();
+    const auto currentPos = glm::vec3(modelMatrix[3]);
+    const auto currentForward = glm::normalize(glm::vec3(modelMatrix[2]));
+
+    const auto toNewWaypoint = glm::normalize(newCurrWaypoint - currentPos);
+    const float dot = glm::clamp(glm::dot(currentForward, toNewWaypoint), -1.0f, 1.0f);
+
+    unsigned int closestWaypoint = 0;
+
+    std::cout << "DOT " << dot << std::endl;
+    if (dot >= 0.0f)
+        closestWaypoint = seekClosestSmallerWaypoint(path);
+    else
+        closestWaypoint = seekClosestBiggerWaypoint(path);
+
+    std::cout << currentWaypoint << "  " << closestWaypoint << std::endl;
+    waypoints = path;
+    currentWaypoint = closestWaypoint;
+}
+
+unsigned int Opponent::seekClosestBiggerWaypoint(const std::vector<glm::vec3> &newPath) const {
+    float lastDistance = -1;
+
+    for (size_t i = 0; i < WAYPOINT_SEEK_DEPTH; ++i) {
+        const auto newWaypointIndex = (currentWaypoint + i) % waypoints.size();
+        const auto newWaypoint = newPath[newWaypointIndex];
+        const auto currentPos = vehicle->getPosition();
+        const auto distance = glm::distance(currentPos, newWaypoint);
+
+        if (lastDistance < 0) {
+            lastDistance = distance;
+            continue;
+        }
+
+        std::cout << "DISTANCE  " << distance << "  " << lastDistance;
+        if (distance > lastDistance)
+            return (newWaypointIndex) % waypoints.size();
+
+        lastDistance = distance;
+    }
+
+    /* Fallback */
+    std::cout << "Fallback was called when seeking for closest waypoint forward" << std::endl;
+    return (currentWaypoint + WAYPOINT_SEEK_DEPTH) % waypoints.size();
+}
+
+/* TODO: Implement minimum distance between changed waypoints */
+unsigned int Opponent::seekClosestSmallerWaypoint(const std::vector<glm::vec3> &newPath) const {
+    float lastDistance = -1;
+
+    for (size_t i = 0; i < WAYPOINT_SEEK_DEPTH; ++i) {
+        const auto newWaypointIndex = (currentWaypoint - i) % waypoints.size();
+        const auto newWaypoint = newPath[newWaypointIndex];
+        const auto currentPos = vehicle->getPosition();
+        const auto distance = glm::distance(currentPos, newWaypoint);
+
+        if (lastDistance < 0) {
+            lastDistance = distance;
+            continue;
+        }
+
+        /* +2 because we use a waypoint that's slightly further to avoid sharp turns */
+        if (distance > lastDistance)
+            return (newWaypointIndex + 2) % waypoints.size();
+
+        lastDistance = distance;
+    }
+
+    /* Fallback */
+    std::cout << "Fallback was called when seeking for closest waypoint backward" << std::endl;
+    return (currentWaypoint - WAYPOINT_SEEK_DEPTH) % waypoints.size();
+}
+
+void Opponent::selectRandomNewPath() {
+    waypoints = OpponentPathGenerator::getInstance().getRandomPathFromMemory();
+    /* Set the waypoint to one ahead after the lap is finished
+     * so that the change is not that jittery */
+    currentWaypoint = 1;
+}
+
 void Opponent::updateSteering() {
     const auto modelMatrix = vehicle->getOpenGLModelMatrix();
     const auto currentPos = glm::vec3(modelMatrix[3]);
-    const glm::vec3 forward = glm::normalize(glm::vec3(modelMatrix[2])); // usually Z axis
+    const glm::vec3 forward = glm::normalize(glm::vec3(modelMatrix[2]));
 
     const glm::vec3 toTarget = waypoints[currentWaypoint] - currentPos;
     const float distance = glm::length(toTarget);
@@ -61,6 +156,10 @@ void Opponent::updateSteering() {
      * e.g. because of driving through grass */
     if (distance < WAYPOINT_THRESHOLD) {
         currentWaypoint = (currentWaypoint + 1) % waypoints.size();
+        /* TODO: Implement random path changing across one lap.
+         * Right now it selects the closest waypoint and switches the path,
+         * but it's too aggressive. We need some interpolation */
+        // randomizePath();
     }
 
     const glm::vec3 lookahead = findLookaheadPoint(currentPos);
@@ -100,4 +199,7 @@ void Opponent::updateSteering() {
     }
 
     vehicle->aiUpdateControls(forwardThrottle, brake, steeringAngle);
+
+    if (currentWaypoint == waypoints.size() - 1)
+        selectRandomNewPath();
 }
