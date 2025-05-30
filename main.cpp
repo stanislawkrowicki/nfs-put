@@ -24,7 +24,7 @@
 #include "opponent_path.hpp"
 #include "debug.hpp"
 
-Shader *sp;
+Shader *simpleShader;
 Shader *carShader;
 Shader *trackShader;
 
@@ -174,9 +174,9 @@ void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     glm::mat4 model = glm::make_mat4(mat);
     model = glm::scale(model, glm::vec3(halfExtents.x() * 2, halfExtents.y() * 2, halfExtents.z() * 2));
 
-    carShader->use();
-    carShader->setUniform("M", model);
-    carShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
+    simpleShader->use();
+    simpleShader->setUniform("M", model);
+    simpleShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
     glBindVertexArray(0);
@@ -300,19 +300,18 @@ void drawScene(GLFWwindow *window) {
             brakeLightDirections.emplace_back(-forwardVector);
         }
 
-        sp->use();
-        sp->setUniform("V", view);
-        sp->setUniform("P", projection);
-
-        sp->setUniform("M", modelMatrix);
-
-        vehicleModel->Draw(*sp);
-
         carShader->use();
         carShader->setUniform("V", view);
         carShader->setUniform("P", projection);
+        carShader->setUniform("M", modelMatrix);
+
+        vehicleModel->Draw(*simpleShader);
+
+        simpleShader->use();
+        simpleShader->setUniform("V", view);
+        simpleShader->setUniform("P", projection);
         for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
-            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
+            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), simpleShader);
         }
     }
 
@@ -344,11 +343,11 @@ void drawScene(GLFWwindow *window) {
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
 
-    carShader->use();
-    carShader->setUniform("V", view);
-    carShader->setUniform("P", projection);
+    simpleShader->use();
+    simpleShader->setUniform("V", view);
+    simpleShader->setUniform("P", projection);
     for (const auto &waypoint: opponent->waypoints) {
-        drawWaypoint(waypoint, carShader);
+        drawWaypoint(waypoint, simpleShader);
     }
 }
 
@@ -416,9 +415,9 @@ int main() {
     glCullFace(GL_BACK);
 
     trackModel = new Model("spielberg.glb", true);
-    sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
+    simpleShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
-    carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
+    carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");
 
     auto meshes = trackModel->getMeshes();
 
