@@ -304,8 +304,9 @@ void drawScene(GLFWwindow *window) {
         carShader->setUniform("V", view);
         carShader->setUniform("P", projection);
         carShader->setUniform("M", modelMatrix);
+        carShader->setUniform("u_braking", vehicle->getIsBraking());
 
-        vehicleModel->Draw(*simpleShader);
+        vehicleModel->Draw(*carShader);
 
         simpleShader->use();
         simpleShader->setUniform("V", view);

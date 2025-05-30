@@ -74,8 +74,10 @@ unsigned int TextureFromFile(const char *path, const std::string &directory) {
     return texID;
 }
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
-    : vertices(std::move(vertices)), indices(std::move(indices)), textures(std::move(textures)) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures,
+           const unsigned int materialID)
+    : vertices(std::move(vertices)), indices(std::move(indices)), textures(std::move(textures)),
+      materialID(materialID) {
     setupMesh();
 }
 
@@ -122,6 +124,7 @@ void Mesh::Draw(const Shader &shader) const {
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
 
+    glUniform1ui(shader.u("u_materialID"), materialID);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -192,6 +195,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
             indices.push_back(mesh->mFaces[i].mIndices[j]);
     }
 
+    std::cout << "material id: " << mesh->mMaterialIndex << std::endl;
     aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
     for (int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); ++i)
         std::cout << "Found DIFFUSE texture: " << std::endl;
@@ -207,7 +211,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     auto specularMaps = loadMaterialTextures(material, scene, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-    return {vertices, indices, textures};
+    return {vertices, indices, textures, mesh->mMaterialIndex};
 }
 
 std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, const aiTextureType type,
@@ -230,6 +234,7 @@ std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const ai
             const int  textureIndex = std::stoi(str.C_Str() + 1);
             aiTexture *embeddedTexture = scene->mTextures[textureIndex];
 
+            std::cout << str.C_Str() << std::endl;
             if (embeddedTexture->mHeight == 0) {
                 texture.id = TextureFromMemory(reinterpret_cast<unsigned char *>(embeddedTexture->pcData),
                                                embeddedTexture->mWidth, str.C_Str());
