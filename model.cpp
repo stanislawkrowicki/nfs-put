@@ -118,7 +118,7 @@ void Mesh::Draw(const Shader &shader) const {
         else if (name == "texture_specular")
             number = std::to_string(specularNr++);
 
-        glUniform1i(shader.u("material." + name + number), static_cast<GLint>(i));
+        glUniform1i(shader.u(name + number), static_cast<GLint>(i));
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
 

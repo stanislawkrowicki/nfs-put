@@ -71,4 +71,9 @@ struct VehicleConfig {
         {{-0.8f, -0.22f + centerOfMassOffset, -1.32f}, false}, // Rear Left
         {{0.8f, -0.22f + centerOfMassOffset, -1.32f}, false} // Rear Right
     };
+
+    mutable std::vector<glm::vec3> brakeLights = {
+        glm::vec3(-0.7f, 0.0f, -1.6f),
+        glm::vec3(0.7f, 0.0f, -1.6f)
+    };
 };

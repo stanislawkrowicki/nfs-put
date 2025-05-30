@@ -275,19 +275,11 @@ void drawScene(GLFWwindow *window) {
 
     Skybox::draw(view, projection);
 
-    trackShader->use();
-
-    constexpr auto model = glm::mat4(1.0f);
-    trackShader->setUniform("P", projection);
-    trackShader->setUniform("V", view);
-    trackShader->setUniform("M", model);
-
-    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.90f));
-    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 50.0f, 20.0f));
-    trackShader->setUniform("u_camPos", glm::vec3(0.0f, 5.0f, 10.0f));
-    glActiveTexture(GL_TEXTURE0);
-    trackShader->setUniform("texture_diffuse1", 0);
-    trackModel->Draw(*trackShader);
+    std::vector<glm::vec3> brakeLightPositions;
+    std::vector<glm::vec3> brakeLightDirections;
+    int brakeLightCount = 0;
+    /* Limit for the shader */
+    constexpr int brakeLightLimit = 8;
 
     // Draw chassis
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
@@ -296,6 +288,16 @@ void drawScene(GLFWwindow *window) {
         const auto vehicleModel = vehicle->getModel();
 
         glm::mat4 modelMatrix = vehicle->getOpenGLModelMatrix();
+        const auto vehiclePos = modelMatrix[3];
+        const auto forwardVector = modelMatrix[2];
+
+        if (vehicle->getIsBraking() && brakeLightCount <= brakeLightLimit - 2) {
+            brakeLightCount += 2;
+            brakeLightPositions.emplace_back(modelMatrix * glm::vec4(config.brakeLights[0], 1.0f));
+            brakeLightPositions.emplace_back(modelMatrix * glm::vec4(config.brakeLights[1], 1.0f));
+            brakeLightDirections.emplace_back(-forwardVector);
+            brakeLightDirections.emplace_back(-forwardVector);
+        }
 
         sp->use();
         sp->setUniform("V", view);
@@ -312,6 +314,29 @@ void drawScene(GLFWwindow *window) {
             drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
         }
     }
+
+    trackShader->use();
+
+    constexpr auto model = glm::mat4(1.0f);
+    trackShader->setUniform("P", projection);
+    trackShader->setUniform("V", view);
+    trackShader->setUniform("M", model);
+
+    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.95f));
+    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 200.0f, 20.0f));
+    trackShader->setUniform("u_lightIntensity", 1.1f);
+    trackShader->setUniform("u_camPos", glm::inverse(view)[3]);
+
+    trackShader->setUniform("u_brakeLightCount", brakeLightCount);
+
+    if (brakeLightCount > 0) {
+        glUniform3fv(trackShader->u("u_brakeLightPositions[0]"), brakeLightLimit,
+                     glm::value_ptr(brakeLightPositions[0]));
+        glUniform3fv(trackShader->u("u_brakeLightDirections[0]"), brakeLightLimit,
+                     glm::value_ptr(brakeLightDirections[0]));
+    }
+
+    trackModel->Draw(*trackShader);
 
     const auto debugDrawer = Physics::getInstance().getDebugDrawer();
 
