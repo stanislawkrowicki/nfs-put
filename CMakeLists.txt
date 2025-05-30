@@ -88,7 +88,12 @@ add_executable(nfsput main.cpp shader.cpp
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)
 target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} ${bullet_SOURCE_DIR}/src .)
 
-if(WIN32)
+if (UNIX)
+    find_package(OpenGL REQUIRED)
+    find_package(GLEW REQUIRED)
+    target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW)
+
+elseif (WIN32)
     # OpenGL
     target_link_libraries(nfsput PRIVATE opengl32 gdi32)
 
@@ -99,6 +104,7 @@ if(WIN32)
     target_include_directories(nfsput PRIVATE ${GLEW_INCLUDE_DIR})
     target_link_libraries(nfsput PRIVATE ${GLEW_LIBRARY})
 endif()
+
 set(MODELS_DIR "${CMAKE_SOURCE_DIR}/models/")
 set(SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders/")
 set(SKYBOX_DIR "${CMAKE_SOURCE_DIR}/skybox/")
