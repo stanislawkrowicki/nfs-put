@@ -52,8 +52,8 @@ void Camera::ProcessMouseScroll(float yOffset) {
         if (Zoom < 1.0f) Zoom = 1.0f;
         if (Zoom > 45.0f) Zoom = 45.0f;
     } else if (Mode == FOLLOW) {
-        FollowDistance -= yOffset;
-        FollowDistance = std::clamp(FollowDistance, 5.0f, 25.0f);
+        baseFollowDistance -= yOffset;
+        baseFollowDistance = std::clamp(baseFollowDistance, minFollowDistance,maxFollowDistance);
     }
 }
 
