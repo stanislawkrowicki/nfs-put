@@ -16,6 +16,8 @@ class Vehicle {
 
     std::shared_ptr<Model> model;
 
+    bool isBraking;
+
     void createBtVehicle();
 
     float calculateSteeringIncrement(float speed) const;
@@ -49,8 +51,10 @@ public:
     [[nodiscard]]
     glm::vec3 getPosition() const;
 
+    [[nodiscard]]
+    bool getIsBraking() const;
 
-    void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt) const;
+    void updateControls(bool forward, bool backward, bool handbrake, bool left, bool right, float dt);
 
     /**
      * Analog version of updateControls for precise AI steering
@@ -58,5 +62,5 @@ public:
      * @param backward bool
      * @param steering float, wheels turning angle in radians
      */
-    void aiUpdateControls(bool forward, bool backward, float steering) const;
+    void aiUpdateControls(bool forward, bool backward, float steering);
 };

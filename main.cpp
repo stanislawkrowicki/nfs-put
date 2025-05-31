@@ -22,8 +22,9 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "skybox.hpp"
 #include "opponent_path.hpp"
+#include "debug.hpp"
 
-Shader *sp;
+Shader *simpleShader;
 Shader *carShader;
 Shader *trackShader;
 
@@ -173,9 +174,9 @@ void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     glm::mat4 model = glm::make_mat4(mat);
     model = glm::scale(model, glm::vec3(halfExtents.x() * 2, halfExtents.y() * 2, halfExtents.z() * 2));
 
-    carShader->use();
-    carShader->setUniform("M", model);
-    carShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
+    simpleShader->use();
+    simpleShader->setUniform("M", model);
+    simpleShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
     glBindVertexArray(0);
@@ -285,19 +286,11 @@ void drawScene(GLFWwindow *window) {
 
     Skybox::draw(view, projection);
 
-    trackShader->use();
-
-    constexpr auto model = glm::mat4(1.0f);
-    trackShader->setUniform("P", projection);
-    trackShader->setUniform("V", view);
-    trackShader->setUniform("M", model);
-
-    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.90f));
-    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 50.0f, 20.0f));
-    trackShader->setUniform("u_camPos", glm::vec3(0.0f, 5.0f, 10.0f));
-    glActiveTexture(GL_TEXTURE0);
-    trackShader->setUniform("texture_diffuse1", 0);
-    trackModel->Draw(*trackShader);
+    std::vector<glm::vec3> brakeLightPositions;
+    std::vector<glm::vec3> brakeLightDirections;
+    int brakeLightCount = 0;
+    /* Limit for the shader */
+    constexpr int brakeLightLimit = 8;
 
     // Draw chassis
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
@@ -306,33 +299,66 @@ void drawScene(GLFWwindow *window) {
         const auto vehicleModel = vehicle->getModel();
 
         glm::mat4 modelMatrix = vehicle->getOpenGLModelMatrix();
+        const auto vehiclePos = modelMatrix[3];
+        const auto forwardVector = modelMatrix[2];
 
-        sp->use();
-        sp->setUniform("V", view);
-        sp->setUniform("P", projection);
-
-        sp->setUniform("M", modelMatrix);
-
-        vehicleModel->Draw(*sp);
+        if (vehicle->getIsBraking() && brakeLightCount <= brakeLightLimit - 2) {
+            brakeLightCount += 2;
+            brakeLightPositions.emplace_back(modelMatrix * glm::vec4(config.brakeLights[0], 1.0f));
+            brakeLightPositions.emplace_back(modelMatrix * glm::vec4(config.brakeLights[1], 1.0f));
+            brakeLightDirections.emplace_back(-forwardVector);
+            brakeLightDirections.emplace_back(-forwardVector);
+        }
 
         carShader->use();
         carShader->setUniform("V", view);
         carShader->setUniform("P", projection);
+        carShader->setUniform("M", modelMatrix);
+        carShader->setUniform("u_braking", vehicle->getIsBraking());
+
+        vehicleModel->Draw(*carShader);
+
+        simpleShader->use();
+        simpleShader->setUniform("V", view);
+        simpleShader->setUniform("P", projection);
         for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
-            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader);
+            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), simpleShader);
         }
     }
+
+    trackShader->use();
+
+    constexpr auto model = glm::mat4(1.0f);
+    trackShader->setUniform("P", projection);
+    trackShader->setUniform("V", view);
+    trackShader->setUniform("M", model);
+
+    trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.95f));
+    trackShader->setUniform("u_lightPos", glm::vec3(10.0f, 200.0f, 20.0f));
+    trackShader->setUniform("u_lightIntensity", 1.1f);
+    trackShader->setUniform("u_camPos", glm::inverse(view)[3]);
+
+    trackShader->setUniform("u_brakeLightCount", brakeLightCount);
+
+    if (brakeLightCount > 0) {
+        glUniform3fv(trackShader->u("u_brakeLightPositions[0]"), brakeLightLimit,
+                     glm::value_ptr(brakeLightPositions[0]));
+        glUniform3fv(trackShader->u("u_brakeLightDirections[0]"), brakeLightLimit,
+                     glm::value_ptr(brakeLightDirections[0]));
+    }
+
+    trackModel->Draw(*trackShader);
 
     const auto debugDrawer = Physics::getInstance().getDebugDrawer();
 
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
 
-    carShader->use();
-    carShader->setUniform("V", view);
-    carShader->setUniform("P", projection);
+    simpleShader->use();
+    simpleShader->setUniform("V", view);
+    simpleShader->setUniform("P", projection);
     for (const auto &waypoint: opponent->waypoints) {
-        drawWaypoint(waypoint, carShader);
+        drawWaypoint(waypoint, simpleShader);
     }
 }
 
@@ -345,6 +371,16 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_CONTEXT_DEBUG, true);
+
+    int flags;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(glDebugOutput, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+    }
 
     glfwWindowHint(GLFW_DEPTH_BITS, 32);
 
@@ -390,9 +426,9 @@ int main() {
     glCullFace(GL_BACK);
 
     trackModel = new Model("spielberg.glb", true);
-    sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
+    simpleShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
-    carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
+    carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");
 
     auto meshes = trackModel->getMeshes();
 

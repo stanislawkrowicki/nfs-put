@@ -131,10 +131,16 @@ glm::vec3 Vehicle::getPosition() const {
     return {pos.x, pos.y, pos.z};
 }
 
+bool Vehicle::getIsBraking() const {
+    return isBraking;
+}
+
 void Vehicle::updateControls(const bool forward, const bool backward, const bool handbrake, const bool left,
-                             const bool right, const float dt) const {
+                             const bool right, const float dt) {
     float appliedEngineForce = 0.0f;
     float appliedHandbrakeForce = 0.0f;
+
+    isBraking = backward || handbrake;
 
     if (forward) {
         appliedEngineForce = config.engineForce;
@@ -180,9 +186,11 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     btVehicle->setSteeringValue(steering, 1); // Front right;
 }
 
-void Vehicle::aiUpdateControls(const bool forward, const bool backward, const float steering) const {
+void Vehicle::aiUpdateControls(const bool forward, const bool backward, const float steering) {
     float appliedEngineForce = 0.0f;
     float appliedBrakeForce = 0.0f;
+
+    isBraking = backward;
 
     if (forward) {
         appliedEngineForce = config.engineForce;
