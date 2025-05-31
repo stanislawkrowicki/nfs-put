@@ -4,6 +4,7 @@
 #include <cstring>
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
+#include "glm/gtc/type_ptr.inl"
 
 unsigned int UploadTexture(const unsigned char *data, const int width, const int height, const int nrComponents) {
     if (!data) return 0;
@@ -109,6 +110,10 @@ void Mesh::setupMesh() {
 void Mesh::Draw(const Shader &shader) const {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
+    unsigned int baseColorNr = 1;
+    unsigned int normalNr = 1;
+    unsigned int roughnessNr = 1;
+    unsigned int metalnessNr = 1;
 
     for (unsigned int i = 0; i < textures.size(); ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
@@ -119,9 +124,24 @@ void Mesh::Draw(const Shader &shader) const {
             number = std::to_string(diffuseNr++);
         else if (name == "texture_specular")
             number = std::to_string(specularNr++);
+        else if (name == "texture_basecolor")
+            number = std::to_string(baseColorNr++);
+        else if (name == "texture_normal")
+            number = std::to_string(normalNr++);
+        else if (name == "texture_roughness")
+            number = std::to_string(roughnessNr++);
+        else if (name == "texture_metalness")
+            number = std::to_string(metalnessNr++);
 
         glUniform1i(shader.u(name + number), static_cast<GLint>(i));
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
+    }
+
+    if (diffuseNr == 1 && baseColorNr == 1) {
+        glUniform4fv(shader.u("u_baseColor"), 1, glm::value_ptr(baseColor));
+        glUniform1i(shader.u("u_hasBaseColorTexture"), false);
+    } else {
+        glUniform1i(shader.u("u_hasBaseColorTexture"), true);
     }
 
     glUniform1ui(shader.u("u_materialID"), materialID);
@@ -196,22 +216,47 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
     }
 
     std::cout << "material id: " << mesh->mMaterialIndex << std::endl;
-    aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-    for (int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); ++i)
-        std::cout << "Found DIFFUSE texture: " << std::endl;
+    const aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 
-    for (int i = 0; i < material->GetTextureCount(aiTextureType_BASE_COLOR); ++i)
-        std::cout << "Found BASE_COLOR texture: " << std::endl;
+    /* Debug */
+    constexpr aiTextureType textureTypes[] = {
+        aiTextureType_DIFFUSE, aiTextureType_BASE_COLOR, aiTextureType_METALNESS, aiTextureType_NORMALS,
+        aiTextureType_DIFFUSE_ROUGHNESS
+    };
 
-    for (int i = 0; i < material->GetTextureCount(aiTextureType_METALNESS); ++i)
-        std::cout << "Found METALNESS texture: " << std::endl;
+    for (const auto textureType: textureTypes) {
+        if (material->GetTextureCount(textureType) > 0)
+            std::cout << "Found type of texture with id " << textureType << std::endl;
+    }
 
-    auto        diffuseMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE, "texture_diffuse");
+    auto diffuseMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE, "texture_diffuse");
     textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+    auto baseColorMaps = loadMaterialTextures(material, scene, aiTextureType_BASE_COLOR, "texture_basecolor");
+    textures.insert(textures.end(), baseColorMaps.begin(), baseColorMaps.end());
+
     auto specularMaps = loadMaterialTextures(material, scene, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-    return {vertices, indices, textures, mesh->mMaterialIndex};
+    auto metalnessMaps = loadMaterialTextures(material, scene, aiTextureType_METALNESS, "texture_metalness");
+    textures.insert(textures.end(), metalnessMaps.begin(), metalnessMaps.end());
+
+    auto roughnessMaps = loadMaterialTextures(material, scene, aiTextureType_DIFFUSE_ROUGHNESS, "texture_roughness");
+    textures.insert(textures.end(), roughnessMaps.begin(), roughnessMaps.end());
+
+    auto normalMaps = loadMaterialTextures(material, scene, aiTextureType_NORMALS, "texture_normal");
+    textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+
+    auto newMesh = new Mesh(vertices, indices, textures, mesh->mMaterialIndex);
+    if (material->GetTextureCount(aiTextureType_DIFFUSE) == 0 &&
+        material->GetTextureCount(aiTextureType_BASE_COLOR) == 0) {
+        aiColor4D color;
+        if (AI_SUCCESS == material->Get(AI_MATKEY_BASE_COLOR, color)) {
+            newMesh->baseColor = glm::vec4(color.r, color.g, color.b, color.a);
+        } else {
+            newMesh->baseColor = glm::vec4(1.0);
+        }
+    }
+    return *newMesh;
 }
 
 std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const aiScene *scene, const aiTextureType type,
@@ -219,7 +264,12 @@ std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, const ai
     std::vector<Texture> textures;
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
         aiString str;
-        mat->GetTexture(type, i, &str);
+        aiTextureMapping uvIndex;
+        mat->GetTexture(type, i, &str, &uvIndex);
+
+        if (uvIndex != 0) {
+            std::cout << "uvIndex is " << uvIndex << std::endl;
+        }
 
         auto it = std::find_if(loadedTextures.begin(), loadedTextures.end(),
                                [&](const Texture &t) { return std::strcmp(t.path.c_str(), str.C_Str()) == 0; });
