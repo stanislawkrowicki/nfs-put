@@ -32,6 +32,7 @@ void errorCallback(int error, const char *description) { fputs(description, stde
 
 Camera camera(glm::vec3(0.0f, 5.0f, 0.0f));
 Model *trackModel;
+Model *wheelModel;
 float  lastX = 800.0f / 2.0f;
 float  lastY = 600.0f / 2.0f;
 bool   firstMouse = true;
@@ -232,22 +233,24 @@ void setupWheelGeometry(int segments = 24) {
     glBindVertexArray(0);
 }
 
-void drawWheel(const btWheelInfo &wheel, Shader *shader) {
+void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID) {
     btTransform trans = wheel.m_worldTransform;
     btScalar mat[16];
     trans.getOpenGLMatrix(mat);
-
     glm::mat4 model = glm::make_mat4(mat);
-    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0)); // rotate to lie flat
-    model = glm::scale(model, glm::vec3(wheel.m_wheelsRadius, wheel.m_wheelsRadius, 1.0f));
+    model = glm::scale(model, glm::vec3(1.4f, 1.4f, 1.4f));
 
-    shader->use();
+    if (wheelID == 0 || wheelID == 2) {
+        /* Right wheels. Hacky. */
+        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::translate(model, glm::vec3(0.035f, 0.0f, 0.0f));
+    } else {
+        model = glm::translate(model, glm::vec3(0.068f, 0.0f, 0.0f));
+    }
+
     shader->setUniform("M", model);
-    shader->setUniform("color", glm::vec3(1.0f, 0.0f, 0.0f)); // red
 
-    glBindVertexArray(wheelVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, wheelVertexCount);
-    glBindVertexArray(0);
+    wheelModel->Draw(*shader);
 }
 
 void drawScene(GLFWwindow *window) {
@@ -324,12 +327,12 @@ void drawScene(GLFWwindow *window) {
         carShader->setUniform("u_bodyColor", config.bodyColor);
         vehicleModel->Draw(*carShader);
 
-        simpleShader->use();
-        simpleShader->setUniform("V", view);
-        simpleShader->setUniform("P", projection);
+        glDisable(GL_CULL_FACE);
         for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
-            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), simpleShader);
+            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader, i);
         }
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
     }
 
     trackShader->use();
@@ -432,6 +435,7 @@ int main() {
     glCullFace(GL_BACK);
 
     trackModel = new Model("spielberg.glb", true);
+    wheelModel = new Model("wheel.glb", true);
     simpleShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");

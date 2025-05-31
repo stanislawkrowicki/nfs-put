@@ -31,7 +31,7 @@ void main()
     discard;
 
 /* Override car body color */
-    if (u_materialID == 7)
+    if (u_materialID == 5)
     texColor = u_bodyColor;
 
     vec3 objColor = texColor.rgb;
@@ -59,7 +59,7 @@ void main()
     float fresnel = pow(1.0 - max(dot(viewDir, norm), 0.0), 5.0);
     result += fresnel * vec3(0.1, 0.1, 0.15);
 
-    if (u_materialID == 9) {
+    if (u_materialID == 7) {
         if (u_braking)
         result *= vec3(0.7, 0.2, 0.2);
         else
