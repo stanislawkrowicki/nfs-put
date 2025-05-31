@@ -14,6 +14,7 @@ struct VehicleConfig {
     mutable std::string name = "Vehicle";
     mutable bool isPlayerVehicle = true;
 
+    mutable glm::vec4 bodyColor = glm::vec4(0.0f, 0.273f, 0.773f, 1.0f);
     mutable btVector3 position = {0, 2, 0};
     mutable btQuaternion rotation = btQuaternion::getIdentity();
 

@@ -1,17 +1,25 @@
 #version 450 core
-out vec4 FragColor;
 
 in vec2 TexCoords;
+in vec3 Normal;
+in vec3 WorldPos;
 
-uniform sampler2D texture_diffuse1;
+out vec4 FragColor;
+
 uniform sampler2D texture_basecolor1;
-uniform sampler2D texture_normals1;
 
 uniform bool u_hasBaseColorTexture;
 uniform vec4 u_baseColor;
 uniform uint u_materialID;
 
+uniform vec4 u_bodyColor;
+
 uniform bool u_braking;
+
+uniform vec3 u_lightColor;
+uniform vec3 u_lightPos;
+uniform float u_lightIntensity;
+uniform vec3 u_camPos;
 
 void main()
 {
@@ -19,17 +27,44 @@ void main()
     ? texture(texture_basecolor1, TexCoords)
     : u_baseColor;
 
-    if (texColor.a <= 0.01)
+    if (texColor.a < 0.1)
     discard;
+
+/* Override car body color */
+    if (u_materialID == 7)
+    texColor = u_bodyColor;
+
+    vec3 objColor = texColor.rgb;
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(u_lightPos - WorldPos);
+    vec3 viewDir = normalize(u_camPos - WorldPos);
+    vec3 lightColor = u_lightColor * u_lightIntensity;
+
+    float ambientStrength = 0.45;
+    vec3 ambientLight = ambientStrength * lightColor;
+
+    float diffuseStrength = max(dot(norm, lightDir), 0.0);
+    vec3 diffuseLight = diffuseStrength * lightColor;
+
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float specularStrength = 0.5;
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64.0);
+    vec3 specularLight = specularStrength * spec * lightColor;
+
+    float distance = length(u_lightPos - WorldPos);
+    float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+    float ao = pow(clamp(dot(norm, lightDir), 0.0, 1.0), 2.0);
+    vec3 result = objColor * (ambientLight + ao * diffuseLight + specularLight);
+
+    float fresnel = pow(1.0 - max(dot(viewDir, norm), 0.0), 5.0);
+    result += fresnel * vec3(0.1, 0.1, 0.15);
 
     if (u_materialID == 9) {
         if (u_braking)
-        texColor *= vec4(0.7f, 0.2f, 0.2f, 1.0f);
+        result *= vec3(0.7, 0.2, 0.2);
         else
-        texColor *= vec4(0.3f, 0.3f, 0.3f, 1.0f);
+        result *= vec3(0.3, 0.3, 0.3);
     }
 
-    FragColor = texColor;
+    FragColor = vec4(pow(result, vec3(1.0 / 1.2)), 1.0);
 }
-
-

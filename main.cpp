@@ -316,6 +316,12 @@ void drawScene(GLFWwindow *window) {
         carShader->setUniform("M", modelMatrix);
         carShader->setUniform("u_braking", vehicle->getIsBraking());
 
+        carShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.95f));
+        carShader->setUniform("u_lightPos", glm::vec3(10.0f, 200.0f, 20.0f));
+        carShader->setUniform("u_lightIntensity", 1.1f);
+        carShader->setUniform("u_camPos", glm::inverse(view)[3]);
+
+        carShader->setUniform("u_bodyColor", config.bodyColor);
         vehicleModel->Draw(*carShader);
 
         simpleShader->use();
@@ -476,6 +482,7 @@ int main() {
     opponentConfig.frictionSlip = 20.0f;
     opponentConfig.maxSteeringAngle *= 0.8;
     opponentConfig.boostStrength *= 1.4;
+    opponentConfig.bodyColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     // opponentConfig.centerOfMassOffset *= 2.0f;
 
 
