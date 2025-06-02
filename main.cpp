@@ -442,7 +442,7 @@ int main() {
     glCullFace(GL_BACK);
 
     trackModel = new Model("spielberg.glb", true);
-    wheelModel = new Model("wheel.glb", true);
+    wheelModel = new Model("wheel.glb", false);
     simpleShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");
