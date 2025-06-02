@@ -16,7 +16,9 @@ class Vehicle {
 
     std::shared_ptr<Model> model;
 
-    bool isBraking;
+    float wheelRollingRotation[4] = {0, 0, 0, 0};
+
+    bool isBraking = false;
 
     void createBtVehicle();
 
@@ -63,4 +65,6 @@ public:
      * @param steering float, wheels turning angle in radians
      */
     void aiUpdateControls(bool forward, bool backward, float steering);
+
+    float applyRotationToWheel(size_t wheelIndex, float deltaRotation);
 };

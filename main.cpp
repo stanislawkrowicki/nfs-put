@@ -233,8 +233,8 @@ void setupWheelGeometry(int segments = 24) {
     glBindVertexArray(0);
 }
 
-void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID) {
-    btTransform trans = wheel.m_worldTransform;
+void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, const float rollingRotation) {
+    const btTransform trans = wheel.m_worldTransform;
     btScalar mat[16];
     trans.getOpenGLMatrix(mat);
     glm::mat4 model = glm::make_mat4(mat);
@@ -247,6 +247,8 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID) {
     } else {
         model = glm::translate(model, glm::vec3(0.068f, 0.0f, 0.0f));
     }
+
+    model = glm::rotate(model, rollingRotation, glm::vec3(1.0f, 0.0f, 0.0f));
 
     shader->setUniform("M", model);
 
@@ -329,7 +331,12 @@ void drawScene(GLFWwindow *window) {
 
         glDisable(GL_CULL_FACE);
         for (int i = 0; i < vehicle->getBtVehicle()->getNumWheels(); ++i) {
-            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader, i);
+            const float speed = vehicle->getBtVehicle()->getCurrentSpeedKmHour() / 3.6f;
+            const float distanceTraveled = speed * deltaTime;
+            const float deltaRotation = distanceTraveled / config.wheelRadius;
+            const float wheelRotation = vehicle->applyRotationToWheel(i, deltaRotation);
+
+            drawWheel(vehicle->getBtVehicle()->getWheelInfo(i), carShader, i, wheelRotation);
         }
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -363,12 +370,12 @@ void drawScene(GLFWwindow *window) {
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
 
-    simpleShader->use();
-    simpleShader->setUniform("V", view);
-    simpleShader->setUniform("P", projection);
-    for (const auto &waypoint: opponent->waypoints) {
-        drawWaypoint(waypoint, simpleShader);
-    }
+    // simpleShader->use();
+    // simpleShader->setUniform("V", view);
+    // simpleShader->setUniform("P", projection);
+    // for (const auto &waypoint: opponent->waypoints) {
+    //     drawWaypoint(waypoint, simpleShader);
+    // }
 }
 
 int main() {

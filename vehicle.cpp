@@ -220,3 +220,7 @@ void Vehicle::aiUpdateControls(const bool forward, const bool backward, const fl
     btVehicle->setSteeringValue(clampedSteering, 0);
     btVehicle->setSteeringValue(clampedSteering, 1);
 }
+
+float Vehicle::applyRotationToWheel(const size_t wheelIndex, const float deltaRotation) {
+    return wheelRollingRotation[wheelIndex] += deltaRotation;
+}
