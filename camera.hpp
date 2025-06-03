@@ -53,6 +53,7 @@ class Camera {
     Camera_Mode Mode;
 
   public:
+    bool lookReverse = false;
     /* Constructor by vectors */
     explicit Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
                     float yaw = YAW, float pitch = PITCH);
@@ -77,12 +78,12 @@ class Camera {
     [[nodiscard]]
     float getZoom() const;
 
+
   private:
     float baseFollowDistance = 8.0f;
     float speedDistanceFactor = 0.05f;
     float minFollowDistance = 4.0f;
     float maxFollowDistance = 12.0f;
     void updateCameraVectors();
-
     void calculateFollowPositions(const glm::vec3 &vehiclePosition, float vehYaw,float vehicleSpeed);
 };

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     : Position(position), Front(glm::vec3(0.0f, 0.0f, -1.0f)), WorldUp(up), Yaw(yaw), Pitch(pitch),
@@ -78,6 +79,10 @@ void Camera::updateCameraVectors() {
 
 void Camera::calculateFollowPositions(const glm::vec3 &vehiclePosition, float vehYaw, float vehicleSpeed) {
     Yaw = vehYaw;
+    if (lookReverse) {
+        Yaw += 180.0f;
+        std::cout << lookReverse;
+    }
     float dynamicFollowDistance = baseFollowDistance + vehicleSpeed * speedDistanceFactor;
     dynamicFollowDistance = glm::clamp(dynamicFollowDistance, minFollowDistance, maxFollowDistance);
 
