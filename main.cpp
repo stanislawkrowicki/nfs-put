@@ -26,6 +26,7 @@
 Shader *sp;
 Shader *carShader;
 Shader *trackShader;
+Shader *blurShader;
 
 void errorCallback(int error, const char *description) { fputs(description, stderr); }
 
@@ -34,6 +35,8 @@ Model *trackModel;
 float  lastX = 800.0f / 2.0f;
 float  lastY = 600.0f / 2.0f;
 bool   firstMouse = true;
+unsigned int blurFBO, blurTexture;
+unsigned int screenVAO, screenVBO;
 
 // timing
 float deltaTime = 0.0f;
@@ -233,6 +236,46 @@ void setupWheelGeometry(int segments = 24) {
     glBindVertexArray(0);
 }
 
+void setUpScreen() {
+    glGenFramebuffers(1, &blurFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, blurFBO);
+
+    glGenTextures(1, &blurTexture);
+    glBindTexture(GL_TEXTURE_2D, blurTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurTexture, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    // Check completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    float quadVertices[] = {
+                            -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
+
+                            -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
+
+    glGenVertexArrays(1, &screenVAO);
+    glGenBuffers(1, &screenVBO);
+    glBindVertexArray(screenVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) (2 * sizeof(float)));
+}
+
 void drawWheel(const btWheelInfo &wheel, Shader *shader) {
     btTransform trans = wheel.m_worldTransform;
     btScalar mat[16];
@@ -252,10 +295,15 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader) {
 }
 
 void drawScene(GLFWwindow *window) {
+    glBindFramebuffer(GL_FRAMEBUFFER, blurFBO);
+    glEnable(GL_DEPTH_TEST); // Potrzebujemy g??bi przy renderze sceny
+    glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-    if (deltaTime > 0.1f) deltaTime = 0.1f;
+    //if (deltaTime > 0.1f) deltaTime = 0.1f;
     processInput(window);
 
     glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
@@ -270,19 +318,18 @@ void drawScene(GLFWwindow *window) {
     btTransform transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
     btMatrix3x3 rotMatrix = transform.getBasis();
 
-    //Car has different Y and Z axis
+    // Car has different Y and Z axis
     float vehYaw = atan2(rotMatrix[0][0], rotMatrix[0][2]);
     vehYaw = glm::degrees(vehYaw);
 
     btVector3 linearVelocity = playerVehicle->getBtVehicle()->getRigidBody()->getLinearVelocity();
-    float vehicleSpeed = linearVelocity.length();
+    float     vehicleSpeed = linearVelocity.length();
 
     camera.updateCamera(*vehPos, vehYaw, vehicleSpeed);
 
     // view/projection transformations
-    const auto aspectRatio = currentWindowWidth / currentWindowHeight;
-    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
-                                                  0.1f, 1000.0f);
+    const auto      aspectRatio = currentWindowWidth / currentWindowHeight;
+    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio, 0.1f, 1000.0f);
     const glm::mat4 view = camera.GetViewMatrix();
 
     Skybox::draw(view, projection);
@@ -302,7 +349,7 @@ void drawScene(GLFWwindow *window) {
     trackModel->Draw(*trackShader);
 
     // Draw chassis
-    for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
+    for (const auto &vehicle : VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
         // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
         const auto vehicleModel = vehicle->getModel();
@@ -327,16 +374,40 @@ void drawScene(GLFWwindow *window) {
 
     const auto debugDrawer = Physics::getInstance().getDebugDrawer();
 
-    if (debugDrawer->isEnabled())
-        debugDrawer->draw(projection * view * model);
+    if (debugDrawer->isEnabled()) debugDrawer->draw(projection * view * model);
 
     carShader->use();
     carShader->setUniform("V", view);
     carShader->setUniform("P", projection);
-    for (const auto &waypoint: opponent->waypoints) {
+    for (const auto &waypoint : opponent->waypoints) {
         drawWaypoint(waypoint, carShader);
     }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); 
+    glDisable(GL_DEPTH_TEST);            
+
+    blurShader->use();
+    glBindVertexArray(screenVAO);
+    glBindTexture(GL_TEXTURE_2D, blurTexture); 
+
+    glm::vec4 worldPos = glm::vec4(*vehPos, 1.0f);
+    glm::vec4 clipSpacePos = projection * view * worldPos;
+    clipSpacePos /= clipSpacePos.w;
+
+    glm::vec2 screen = glm::vec2(clipSpacePos.x, clipSpacePos.y) * 0.5f + 0.5f; 
+
+    glm::vec3 screenPos = glm::vec3(screen, 0.0f);
+
+    float blurAmount = glm::clamp(vehicleSpeed / 100.0f, 0.0f, 1.0f);
+    blurShader->setUniform("blurAmount", blurAmount);
+    blurShader->setUniform("screenTexture", 0); 
+    blurShader->setUniform("carScreenPos", screenPos);
+
+
+    glDrawArrays(GL_TRIANGLES, 0, 6); 
+
+    glBindVertexArray(0);
 }
+
 
 int main() {
     if (!glfwInit()) {
@@ -395,6 +466,7 @@ int main() {
     sp = new Shader("textured_vert.glsl", nullptr, "textured_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
+    blurShader = new Shader("blur_vert.glsl", nullptr, "blur_frag.glsl");
 
     auto meshes = trackModel->getMeshes();
 
@@ -424,6 +496,7 @@ int main() {
 
     setupCubeGeometry();
     setupWheelGeometry();
+    setUpScreen();
 
     auto &physics = Physics::getInstance();
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
