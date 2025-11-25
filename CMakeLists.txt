@@ -112,3 +112,5 @@ add_definitions(-DMODELS_PATH="${MODELS_DIR}")
 add_definitions(-DSHADERS_PATH="${SHADERS_DIR}")
 add_definitions(-DSKYBOX_PATH="${SKYBOX_DIR}")
 add_definitions(-DSOURCE_PATH="${CMAKE_SOURCE_DIR}")
+
+add_subdirectory(netcode/server)
