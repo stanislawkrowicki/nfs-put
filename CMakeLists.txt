@@ -98,8 +98,8 @@ elseif (WIN32)
     target_link_libraries(nfsput PRIVATE opengl32 gdi32)
 
     # GLEW
-    set(GLEW_INCLUDE_DIR "C:/Users/marha/Documents/studia/semestr 4/grafika/projekt/glew-2.1.0/include")
-    set(GLEW_LIBRARY "C:/Users/marha/Documents/studia/semestr 4/grafika/projekt/glew-2.1.0/lib/Release/x64/glew32.lib")
+    set(GLEW_INCLUDE_DIR "glew-2.1.0/include")
+    set(GLEW_LIBRARY "glew-2.1.0/lib/Release/x64/glew32.lib")
 
     target_include_directories(nfsput PRIVATE ${GLEW_INCLUDE_DIR})
     target_link_libraries(nfsput PRIVATE ${GLEW_LIBRARY})
