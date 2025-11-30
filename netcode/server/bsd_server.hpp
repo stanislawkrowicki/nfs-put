@@ -22,7 +22,7 @@ public:
 
     virtual void addMessageListener(PacketListener listener) = 0;
 
-    virtual ssize_t send(ClientHandle client, const std::string &data) = 0;
+    virtual void send(ClientHandle client, const char *data, ssize_t size) const = 0;
 
 protected:
     std::vector<PacketListener> listeners;

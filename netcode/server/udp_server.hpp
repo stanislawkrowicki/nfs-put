@@ -15,7 +15,7 @@ public:
 
     void addMessageListener(std::function<void(const Packet &)>) override;
 
-    ssize_t send(ClientHandle client, const std::string &data) override;
+    void send(ClientHandle client, const char *data, ssize_t size) const override;
 
 private:
     int socketFd;

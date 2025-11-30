@@ -40,8 +40,17 @@ void UDPServer::addMessageListener(const PacketListener listener) {
     listeners.push_back(listener);
 }
 
-ssize_t UDPServer::send(ClientHandle client, const std::string &data) {
-    throw std::runtime_error("Not yet implemented");
+void UDPServer::send(const ClientHandle client, const char *data, const ssize_t size) const {
+    if (!client.connected) {
+        std::cout << "Tried to send to not connected" << std::endl;
+        return;
+    }
+
+    const ssize_t bytesSent = ::sendto(socketFd, data, size, 0, reinterpret_cast<const sockaddr *>(&client.address),
+                                       sizeof(client.address));
+
+    if (bytesSent <= 0)
+        throw std::runtime_error(std::string("Failed to UDP message: ") + strerror(errno));
 }
 
 [[noreturn]]
@@ -60,10 +69,10 @@ void UDPServer::loop() const {
             continue;
         }
 
-        const auto client = clientManager->getClient(sender);
+        auto client = clientManager->getClient(sender);
 
         if (!client) {
-            clientManager->newClient(sender);
+            client = clientManager->newClient(sender);
         }
 
         auto packet = Packet{
@@ -78,5 +87,6 @@ void UDPServer::loop() const {
 
 void UDPServer::parsePacket(const Packet &packet) const {
     write(STDOUT_FILENO, packet.data.get(), packet.size);
+    send(*packet.sender, "Welcome", 7);
 }
 

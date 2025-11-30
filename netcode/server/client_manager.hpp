@@ -29,7 +29,7 @@ public:
 
     std::unordered_map<uint16_t, ClientHandle> &getAllClients() { return clients; };
 
-    void newClient(sockaddr_in addr) {
+    ClientHandle *newClient(sockaddr_in addr) {
         auto client = ClientHandle();
         client.address = addr;
         client.id = lastClientId;
@@ -47,6 +47,8 @@ public:
         char host[NI_MAXHOST], port[NI_MAXSERV];
         getnameinfo(reinterpret_cast<sockaddr *>(&addr), sizeof(addr), host, NI_MAXHOST, port, NI_MAXSERV, 0);
         printf("new connection from: %s:%s\n", host, port);
+
+        return &clients[lastClientId - 1];
     };
 
 private:
