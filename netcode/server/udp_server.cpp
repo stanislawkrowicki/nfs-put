@@ -11,8 +11,8 @@ UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
     if (socketFd < 0)
         throw std::runtime_error(std::string("Failed to create UdpBSDServer socket! ") + std::strerror(errno));
 
-    // constexpr int one = 1;
-    // setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    constexpr int one = 1;
+    setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
     this->clientManager = std::move(clientManager);
 };
