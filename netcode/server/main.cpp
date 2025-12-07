@@ -4,6 +4,7 @@
 #include <cstring>
 #include <thread>
 
+#include "loop.hpp"
 #include "udp_server.hpp"
 
 int main(const int argc, char *argv[]) {
@@ -20,7 +21,12 @@ int main(const int argc, char *argv[]) {
         udpServer->listen(argv[1]);
     });
 
+    std::thread gameLoopThread([&] {
+        new Loop(*udpServer);
+    });
+
     udpServerThread.join();
+    gameLoopThread.detach();
 
     return 0;
 }

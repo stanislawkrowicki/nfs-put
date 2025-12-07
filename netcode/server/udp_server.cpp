@@ -53,6 +53,12 @@ void UDPServer::send(const ClientHandle client, const char *data, const ssize_t 
         throw std::runtime_error(std::string("Failed to UDP message: ") + strerror(errno));
 }
 
+void UDPServer::sendToAll(const char *data, const ssize_t size) const {
+    for (auto [_, client]: clientManager->getAllClients()) {
+        send(client, data, size);
+    }
+}
+
 [[noreturn]]
 void UDPServer::loop() const {
     while (true) {

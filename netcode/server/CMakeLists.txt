@@ -9,4 +9,6 @@ add_executable(server
         bsd_server.hpp
         udp_server.cpp
         udp_server.hpp
-        client_manager.hpp)
+        client_manager.hpp
+        loop.cpp
+        loop.hpp)

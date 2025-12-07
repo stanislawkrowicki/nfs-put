@@ -24,6 +24,8 @@ public:
 
     virtual void send(ClientHandle client, const char *data, ssize_t size) const = 0;
 
+    virtual void sendToAll(const char *data, ssize_t size) const = 0;
+
 protected:
     std::vector<PacketListener> listeners;
     uint16_t lastClientId = 0;

@@ -17,6 +17,8 @@ public:
 
     void send(ClientHandle client, const char *data, ssize_t size) const override;
 
+    void sendToAll(const char *data, ssize_t size) const override;
+
 private:
     int socketFd;
 
