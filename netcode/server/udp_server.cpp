@@ -72,7 +72,7 @@ void UDPServer::loop() const {
         auto client = clientManager->getClient(sender);
 
         if (!client) {
-            client = clientManager->newClient(sender);
+            client = clientManager->newClient(sender,-1);
         }
 
         auto packet = Packet{

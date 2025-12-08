@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "udp_server.hpp"
+#include "tcp_server.hpp"
 
 int main(const int argc, char *argv[]) {
     if (argc != 2) {
@@ -16,11 +17,19 @@ int main(const int argc, char *argv[]) {
 
     const auto udpServer = std::make_unique<UDPServer>(clientManager);
 
-    std::thread udpServerThread([&] {
-        udpServer->listen(argv[1]);
-    });
+    const auto tcpServer = std::make_unique<TCPServer>(clientManager);
 
-    udpServerThread.join();
+    std::thread tcpServerThread([&] {
+         tcpServer->listen(argv[1]);
+     });
+
+    tcpServerThread.join();
+
+    // std::thread udpServerThread([&] {
+    //     udpServer->listen(argv[1]);
+    // });
+    //
+    // udpServerThread.join();
 
     return 0;
 }

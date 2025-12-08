@@ -23,4 +23,6 @@ private:
     [[noreturn]] void loop() const;
 
     void parsePacket(const Packet &packet) const;
+    void handleNick(const Packet &packet) const;
+    void broadcastPlayers() const;
 };
