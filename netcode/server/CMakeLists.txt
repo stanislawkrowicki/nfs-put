@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+project(server)
+
 add_executable(server
         main.cpp
         connection_manager.hpp
@@ -11,4 +13,13 @@ add_executable(server
         udp_server.hpp
         client_manager.hpp
         loop.cpp
-        loop.hpp)
+        loop.hpp
+        ../shared/packets/packet.hpp
+        ../shared/packets/position_packet.hpp
+        ../shared/packets/packet_header.hpp
+        ../shared/crc32.hpp
+        ../shared/crc32.cpp)
+
+target_link_libraries(server PRIVATE LinearMath)
+
+target_include_directories(server PRIVATE ${bullet_SOURCE_DIR}/src)

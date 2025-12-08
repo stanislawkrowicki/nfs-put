@@ -83,6 +83,13 @@ add_executable(nfsput main.cpp shader.cpp
         opponent.cpp
         opponent_path.hpp
         opponent_path.cpp
+        netcode/client/client.cpp
+        netcode/client/client.hpp
+        netcode/shared/packets/packet.hpp
+        netcode/shared/packets/position_packet.hpp
+        netcode/shared/packets/packet_header.hpp
+        netcode/shared/crc32.hpp
+        netcode/shared/crc32.cpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

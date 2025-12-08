@@ -23,6 +23,10 @@
 #include "skybox.hpp"
 #include "opponent_path.hpp"
 #include "debug.hpp"
+#include "netcode/client/client.hpp"
+#include <chrono>
+
+using namespace std::chrono;
 
 Shader *simpleShader;
 Shader *carShader;
@@ -384,6 +388,9 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    const auto client = new Client();
+    client->sendStartMessage();
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -484,34 +491,45 @@ int main() {
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
-    const VehicleConfig opponentConfig;
-    opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
-    opponentConfig.isPlayerVehicle = false;
-    opponentConfig.engineForce /= 3.0f;
-    opponentConfig.brakingForce *= 0.4;
-    // opponentConfig.rollInfluence /= 10.0;
-    opponentConfig.frictionSlip = 20.0f;
-    opponentConfig.maxSteeringAngle *= 0.8;
-    opponentConfig.boostStrength *= 1.4;
-    opponentConfig.bodyColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    // opponentConfig.centerOfMassOffset *= 2.0f;
-
-
-    opponentVehicle = VehicleManager::getInstance().createVehicle(opponentConfig, vehicleModel);
+    // const VehicleConfig opponentConfig;
+    // opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
+    // opponentConfig.isPlayerVehicle = false;
+    // opponentConfig.engineForce /= 3.0f;
+    // opponentConfig.brakingForce *= 0.4;
+    // // opponentConfig.rollInfluence /= 10.0;
+    // opponentConfig.frictionSlip = 20.0f;
+    // opponentConfig.maxSteeringAngle *= 0.8;
+    // opponentConfig.boostStrength *= 1.4;
+    // opponentConfig.bodyColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    // // opponentConfig.centerOfMassOffset *= 2.0f;
+    //
+    //
+    // opponentVehicle = VehicleManager::getInstance().createVehicle(opponentConfig, vehicleModel);
     Skybox::init();
 
     OpponentPathGenerator::getInstance().loadPathsToMemory("paths.json");
 
-    opponent = new Opponent(opponentVehicle);
+    // opponent = new Opponent(opponentVehicle);
 
+    auto lastTick = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
 
+        if (steady_clock::now() - lastTick > milliseconds(1000 / 32)) {
+            const auto transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
+            client->sendPosition(transform);
+            lastTick = steady_clock::now();
+
+            auto floats = transform.getOrigin().m_floats;
+
+            std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
+        }
+
         processInput(window);
         processVehicleInputs(window, playerVehicle, deltaTime);
 
-        opponent->updateSteering();
+        // opponent->updateSteering();
 
         drawScene(window);
         glfwSwapBuffers(window);

@@ -2,9 +2,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+#include <format>
 #include <iostream>
 #include <utility>
 #include <netdb.h>
+
+#include "../shared/packets/packet.hpp"
+#include "../shared/packets/position_packet.hpp"
 
 UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
     socketFd = ::socket(AF_INET, SOCK_DGRAM, 0);
@@ -34,10 +38,6 @@ void UDPServer::listen(const char *port) {
         throw std::runtime_error(std::string("UdpBSDServer bind failed: ") + strerror(errno));
 
     loop();
-}
-
-void UDPServer::addMessageListener(const PacketListener listener) {
-    listeners.push_back(listener);
 }
 
 void UDPServer::send(const ClientHandle client, const char *data, const ssize_t size) const {
@@ -79,20 +79,24 @@ void UDPServer::loop() const {
 
         if (!client) {
             client = clientManager->newClient(sender);
+            continue;
         }
 
-        auto packet = Packet{
-            .data = std::move(buf),
-            .size = bytesRead,
-            .sender = client
-        };
+        // auto packet = Packet{
+        //     .data = std::move(buf),
+        //     .size = bytesRead,
+        //     .sender = client
+        // };
 
-        parsePacket(packet);
+        // parsePacket(packet);
+
+        parseBuf(buf, bytesRead);
     }
 }
 
-void UDPServer::parsePacket(const Packet &packet) const {
-    write(STDOUT_FILENO, packet.data.get(), packet.size);
-    send(*packet.sender, "Welcome", 7);
-}
+void UDPServer::parseBuf(PacketBuffer &buf, const ssize_t size) const {
+    auto received = deserializePosition(buf, size);
+    auto floats = received.getOrigin().m_floats;
 
+    std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
+}

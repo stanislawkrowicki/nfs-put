@@ -7,4 +7,5 @@ struct ClientHandle {
     sockaddr_in address;
     uint16_t id;
     bool connected;
+    int lastReceivedPacketId;
 };
