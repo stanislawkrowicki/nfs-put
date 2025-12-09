@@ -536,6 +536,8 @@ int main() {
         glfwPollEvents();
     }
 
+    delete client;
+
     glfwDestroyWindow(window);
     glfwTerminate();
 
