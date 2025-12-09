@@ -24,7 +24,7 @@ inline btTransform deserializePosition(const PacketBuffer &packet, const size_t 
 
     transform.deSerialize(floatData);
 
-    const uint32_t packetType = deserialized.header.type;
+    const auto packetType = static_cast<uint32_t>(deserialized.header.type);
     const uint32_t packetId = deserialized.header.id;
     const uint32_t payloadSize = deserialized.header.payloadSize;
 

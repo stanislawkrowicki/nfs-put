@@ -5,8 +5,9 @@
 #include <format>
 #include <memory>
 
+#include "udp_packet_type.hpp"
 #include "../../crc32.hpp"
-#include "../../DeserializationError.hpp"
+#include "../../deserialization_error.hpp"
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
@@ -52,7 +53,7 @@ public:
     }
 
     template<typename T>
-    static T create(const uint8_t type, const uint32_t id, const char *payload, const uint8_t payloadSize) {
+    static T create(const UDPPacketType type, const uint32_t id, const char *payload, const uint8_t payloadSize) {
         if (payloadSize > MAX_PAYLOAD_SIZE) {
             throw std::length_error("Payload size exceeds MAX_PAYLOAD_SIZE");
         }

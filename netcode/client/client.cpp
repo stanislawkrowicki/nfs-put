@@ -67,7 +67,8 @@ void Client::sendPosition(const btTransform &transform) {
     btTransformFloatData floatData{};
     transform.serialize(floatData);
 
-    const auto packet = UDPPacket::create<PositionPacket>(13, lastPacketId, reinterpret_cast<const char *>(&floatData),
+    const auto packet = UDPPacket::create<PositionPacket>(UDPPacketType::Position, lastPacketId,
+                                                          reinterpret_cast<const char *>(&floatData),
                                                           64);
 
     send(UDPPacket::serialize(packet), sizeof(packet));

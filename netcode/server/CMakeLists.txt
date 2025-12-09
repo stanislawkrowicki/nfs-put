@@ -19,7 +19,8 @@ add_executable(server
         ../shared/packets/udp/packet_header.hpp
         ../shared/crc32.hpp
         ../shared/crc32.cpp
-        ../shared/DeserializationError.hpp)
+        ../shared/deserialization_error.hpp
+        ../shared/packets/udp/udp_packet_type.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 
