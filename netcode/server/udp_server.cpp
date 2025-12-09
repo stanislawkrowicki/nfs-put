@@ -7,8 +7,8 @@
 #include <utility>
 #include <netdb.h>
 
-#include "../shared/packets/packet.hpp"
-#include "../shared/packets/position_packet.hpp"
+#include "../shared/packets/udp/udp_packet.hpp"
+#include "../shared/packets/udp/position_packet.hpp"
 
 UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
     socketFd = ::socket(AF_INET, SOCK_DGRAM, 0);

@@ -3,19 +3,19 @@
 #include <iostream>
 
 #include "packet_header.hpp"
-#include "packet.hpp"
+#include "udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
 constexpr int POSITION_PAYLOAD_SIZE = 64;
 
 struct __attribute__((packed)) PositionPacket {
-    PacketHeader header;
+    UDPPacketHeader header;
     char payload[POSITION_PAYLOAD_SIZE];
     uint32_t checksum;
 };
 
 inline btTransform deserializePosition(const PacketBuffer &packet, const size_t size) {
-    const auto deserialized = Packet::deserialize<PositionPacket>(packet.get(), size);
+    const auto deserialized = UDPPacket::deserialize<PositionPacket>(packet.get(), size);
 
     btTransform transform;
     btTransformFloatData floatData{};

@@ -7,7 +7,7 @@
 #include <utility>
 #include <netdb.h>
 
-#include "netcode/shared/packets/position_packet.hpp"
+#include "netcode/shared/packets/udp/position_packet.hpp"
 
 Client::Client() {
     addrinfo hints{};
@@ -67,7 +67,7 @@ void Client::sendPosition(const btTransform &transform) const {
     btTransformFloatData floatData{};
     transform.serialize(floatData);
 
-    const auto packet = Packet::create<PositionPacket>(13, 16, reinterpret_cast<const char *>(&floatData), 64);
+    const auto packet = UDPPacket::create<PositionPacket>(13, 16, reinterpret_cast<const char *>(&floatData), 64);
 
-    send(Packet::serialize(packet), sizeof(packet));
+    send(UDPPacket::serialize(packet), sizeof(packet));
 }

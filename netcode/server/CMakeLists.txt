@@ -14,9 +14,9 @@ add_executable(server
         client_manager.hpp
         loop.cpp
         loop.hpp
-        ../shared/packets/packet.hpp
-        ../shared/packets/position_packet.hpp
-        ../shared/packets/packet_header.hpp
+        ../shared/packets/udp/udp_packet.hpp
+        ../shared/packets/udp/position_packet.hpp
+        ../shared/packets/udp/packet_header.hpp
         ../shared/crc32.hpp
         ../shared/crc32.cpp)
 

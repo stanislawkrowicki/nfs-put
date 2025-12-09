@@ -5,14 +5,14 @@
 #include <format>
 #include <memory>
 
-#include "../crc32.hpp"
+#include "../../crc32.hpp"
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
 constexpr int MAX_PAYLOAD_SIZE = 64;
 
 /** TODO: Implement checking checksum */
-class Packet {
+class UDPPacket {
     template<typename T>
     static uint32_t calculatePacketChecksum(const T &packet) {
         const PacketBuffer buffer = serialize(packet);
