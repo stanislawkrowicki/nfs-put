@@ -7,6 +7,7 @@
 
 class Client {
     int socketFd = -1;
+    long lastPacketId = 0;
 
 public:
     explicit Client();
@@ -19,5 +20,5 @@ public:
 
     void sendStartMessage() const;
 
-    void sendPosition(const btTransform &transform) const;
+    void sendPosition(const btTransform &transform);
 };

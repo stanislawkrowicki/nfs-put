@@ -63,11 +63,13 @@ void Client::sendStartMessage() const {
     send(message, 1);
 }
 
-void Client::sendPosition(const btTransform &transform) const {
+void Client::sendPosition(const btTransform &transform) {
     btTransformFloatData floatData{};
     transform.serialize(floatData);
 
-    const auto packet = UDPPacket::create<PositionPacket>(13, 16, reinterpret_cast<const char *>(&floatData), 64);
+    const auto packet = UDPPacket::create<PositionPacket>(13, lastPacketId, reinterpret_cast<const char *>(&floatData),
+                                                          64);
 
     send(UDPPacket::serialize(packet), sizeof(packet));
+    lastPacketId++;
 }
