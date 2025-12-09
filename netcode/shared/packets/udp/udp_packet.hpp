@@ -6,17 +6,21 @@
 #include <memory>
 
 #include "../../crc32.hpp"
+#include "../../DeserializationError.hpp"
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
 constexpr int MAX_PAYLOAD_SIZE = 64;
 
-/** TODO: Implement checking checksum */
 class UDPPacket {
     template<typename T>
     static uint32_t calculatePacketChecksum(const T &packet) {
         const PacketBuffer buffer = serialize(packet);
-        return CRC32::calculate(buffer.get(), sizeof(T) - sizeof(uint32_t));
+        return calculatePacketChecksum(buffer, sizeof(T));
+    }
+
+    static uint32_t calculatePacketChecksum(const PacketBuffer &buffer, const size_t size) {
+        return CRC32::calculate(buffer.get(), size - sizeof(uint32_t));
     }
 
 public:
@@ -29,16 +33,20 @@ public:
     }
 
     template<typename T>
-    static T deserialize(const char *buffer, const size_t size) {
+    static T deserialize(const PacketBuffer &buffer, const size_t size) {
         constexpr auto expectedSize = sizeof(T);
 
         if (size != expectedSize) {
-            throw std::runtime_error(std::format("Deserialization size mismatch. Expected {} bytes, got {}.",
-                                                 expectedSize, size));
+            throw DeserializationError(std::format("Deserialization size mismatch. Expected {} bytes, got {}.",
+                                                   expectedSize, size));
         }
 
         T packet{};
-        std::memcpy(&packet, buffer, expectedSize);
+        std::memcpy(&packet, buffer.get(), expectedSize);
+
+        if (!validate(buffer, size)) {
+            throw DeserializationError("Received packet with an invalid checksum");
+        }
 
         return packet;
     }
@@ -60,5 +68,16 @@ public:
         packet.checksum = calculatePacketChecksum(packet);
 
         return packet;
+    }
+
+    static bool validate(const PacketBuffer &packet, const size_t size) {
+        constexpr size_t checksumSize = sizeof(uint32_t);
+        uint32_t expectedChecksum;
+        const char *checksumAddress = packet.get() + (size - checksumSize);
+
+        std::memcpy(&expectedChecksum, checksumAddress, checksumSize);
+        const auto checksum = calculatePacketChecksum(packet, size);
+
+        return checksum == expectedChecksum;
     }
 };

@@ -95,8 +95,12 @@ void UDPServer::loop() const {
 }
 
 void UDPServer::parseBuf(PacketBuffer &buf, const ssize_t size) const {
-    auto received = deserializePosition(buf, size);
-    auto floats = received.getOrigin().m_floats;
+    try {
+        auto received = deserializePosition(buf, size);
+        const auto floats = received.getOrigin().m_floats;
 
-    std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
+        std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
+    } catch (DeserializationError &e) {
+        std::cerr << "Error while deserializing: " << e.what() << std::endl;
+    }
 }

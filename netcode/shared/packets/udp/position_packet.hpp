@@ -15,7 +15,7 @@ struct __attribute__((packed)) PositionPacket {
 };
 
 inline btTransform deserializePosition(const PacketBuffer &packet, const size_t size) {
-    const auto deserialized = UDPPacket::deserialize<PositionPacket>(packet.get(), size);
+    const auto deserialized = UDPPacket::deserialize<PositionPacket>(packet, size);
 
     btTransform transform;
     btTransformFloatData floatData{};

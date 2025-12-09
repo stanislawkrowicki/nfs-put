@@ -18,7 +18,8 @@ add_executable(server
         ../shared/packets/udp/position_packet.hpp
         ../shared/packets/udp/packet_header.hpp
         ../shared/crc32.hpp
-        ../shared/crc32.cpp)
+        ../shared/crc32.cpp
+        ../shared/DeserializationError.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 
