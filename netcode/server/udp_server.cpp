@@ -91,7 +91,7 @@ void UDPServer::loop() const {
             continue;
         }
 
-        parseBuf(buf, bytesRead);
+        handlePacket(buf, bytesRead, *client);
     }
 }
 
@@ -106,7 +106,7 @@ void UDPServer::parseBuf(PacketBuffer &buf, const ssize_t size) const {
     }
 }
 
-void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size) const {
+void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, const ClientHandle &client) const {
     const bool isValid = UDPPacket::validate(buf, size);
     if (!isValid) {
         std::cerr << "Received a packet with invalid checksum." << std::endl;
@@ -119,7 +119,7 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size) const 
     try {
         switch (type) {
             case UDPPacketType::Position:
-                PositionHandler::handle(UDPPacket::deserialize<PositionPacket>(buf, size), this);
+                PositionHandler::handle(UDPPacket::deserialize<PositionPacket>(buf, size), client);
                 break;
             default:
                 std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;

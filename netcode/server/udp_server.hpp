@@ -20,7 +20,7 @@ public:
 
     void sendToAllExcept(const char *data, ssize_t size, const ClientHandle &except) const;
 
-    void handlePacket(const PacketBuffer &buf, ssize_t size) const;
+    void handlePacket(const PacketBuffer &buf, ssize_t size, const ClientHandle &client) const;
 
 private:
     int socketFd;

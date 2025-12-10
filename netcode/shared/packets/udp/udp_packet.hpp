@@ -14,15 +14,6 @@ typedef std::unique_ptr<char[]> PacketBuffer;
 constexpr int MAX_PAYLOAD_SIZE = 64;
 
 class UDPPacket {
-    template<typename T>
-    static uint32_t calculatePacketChecksum(const T &packet) {
-        const PacketBuffer buffer = serialize(packet);
-        return calculatePacketChecksum(buffer, sizeof(T));
-    }
-
-    static uint32_t calculatePacketChecksum(const PacketBuffer &buffer, const size_t size) {
-        return CRC32::calculate(buffer.get(), size - sizeof(uint32_t));
-    }
 public:
     template<typename T>
     static PacketBuffer serialize(const T &packet) {
@@ -79,5 +70,15 @@ public:
         const auto checksum = calculatePacketChecksum(packet, size);
 
         return checksum == expectedChecksum;
+    }
+
+    template<typename T>
+    static uint32_t calculatePacketChecksum(const T &packet) {
+        const PacketBuffer buffer = serialize(packet);
+        return calculatePacketChecksum(buffer, sizeof(T));
+    }
+
+    static uint32_t calculatePacketChecksum(const PacketBuffer &buffer, const size_t size) {
+        return CRC32::calculate(buffer.get(), size - sizeof(uint32_t));
     }
 };

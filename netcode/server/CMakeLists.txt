@@ -21,7 +21,9 @@ add_executable(server
         ../shared/crc32.cpp
         ../shared/deserialization_error.hpp
         ../shared/packets/udp/udp_packet_type.hpp
-        handlers/position_handler.hpp)
+        handlers/position_handler.hpp
+        ../shared/packets/udp/server/opponent_positions_packet.hpp
+        ../shared/player_position.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 

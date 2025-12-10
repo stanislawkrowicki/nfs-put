@@ -92,6 +92,8 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/crc32.cpp
         netcode/shared/deserialization_error.hpp
         netcode/shared/packets/udp/udp_packet_type.hpp
+        netcode/shared/packets/udp/server/opponent_positions_packet.hpp
+        netcode/shared/player_position.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)
