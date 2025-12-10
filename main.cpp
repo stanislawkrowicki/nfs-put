@@ -25,6 +25,9 @@
 #include "debug.hpp"
 #include "netcode/client/udp_client.hpp"
 #include <chrono>
+#include <thread>
+
+#include "default_vehicle_model.hpp"
 
 using namespace std::chrono;
 
@@ -388,8 +391,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    const auto client = new UDPClient();
-    client->sendStartMessage();
+    const auto client = std::make_shared<UDPClient>();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -471,14 +473,14 @@ int main() {
         vertexOffset += mesh.vertices.size();
     }
 
-    const auto vehicleModel = std::make_shared<Model>("skyline.glb", true,
-                                                      aiProcess_Triangulate |
-                                                      aiProcess_PreTransformVertices |
-                                                      aiProcess_JoinIdenticalVertices |
-                                                      aiProcess_ImproveCacheLocality |
-                                                      aiProcess_GenSmoothNormals |
-                                                      aiProcess_SortByPType
-    );
+    // const auto vehicleModel = std::make_shared<Model>("skyline.glb", true,
+    //                                                   aiProcess_Triangulate |
+    //                                                   aiProcess_PreTransformVertices |
+    //                                                   aiProcess_JoinIdenticalVertices |
+    //                                                   aiProcess_ImproveCacheLocality |
+    //                                                   aiProcess_GenSmoothNormals |
+    //                                                   aiProcess_SortByPType
+    // );
 
     setupCubeGeometry();
     setupWheelGeometry();
@@ -489,7 +491,13 @@ int main() {
     const VehicleConfig defaultConfig;
     defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
 
+    const auto vehicleModel = VehicleModelCache::getDefaultVehicleModel();
+
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
+
+    std::thread udpListenThread([client] {
+        client->listen();
+    });
 
     // const VehicleConfig opponentConfig;
     // opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
@@ -515,15 +523,10 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
-
         if (steady_clock::now() - lastTick > milliseconds(1000 / 32)) {
             const auto transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
             client->sendPosition(transform);
             lastTick = steady_clock::now();
-
-            auto floats = transform.getOrigin().m_floats;
-
-            std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
         }
 
         processInput(window);
@@ -535,8 +538,6 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    delete client;
 
     glfwDestroyWindow(window);
     glfwTerminate();

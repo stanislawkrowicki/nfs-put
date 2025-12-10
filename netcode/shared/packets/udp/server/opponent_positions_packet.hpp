@@ -32,7 +32,7 @@ inline PacketBuffer serializeOpponentPositionsPacket(const OpponentPositionsPack
         currentSize += sizeof(position);
     }
 
-    const auto checksum = UDPPacket::calculatePacketChecksum(buf, currentSize);
+    const auto checksum = UDPPacket::calculatePacketChecksum(buf, currentSize + sizeof(packet.checksum));
     std::memcpy(buf.get() + currentSize, &checksum, sizeof(checksum));
 
     return buf;
@@ -49,7 +49,7 @@ inline OpponentPositionsPacket deserializeOpponentPositionsPacket(const PacketBu
     const char *checksumAddress = buf.get() + (size - checksumSize);
     std::memcpy(&packet.checksum, checksumAddress, checksumSize);
 
-    const auto checksum = UDPPacket::calculatePacketChecksum(buf, size - checksumSize);
+    const auto checksum = UDPPacket::calculatePacketChecksum(buf, size);
     if (checksum != packet.checksum) {
         throw DeserializationError("Received position packet with invalid checksum.");
     }

@@ -88,6 +88,9 @@ void UDPServer::loop() const {
 
         if (!client) {
             client = clientManager->newClient(sender);
+            char idBuf[2];
+            std::memcpy(idBuf, &client->id, 2);
+            send(*client, idBuf, 2);
             continue;
         }
 

@@ -64,13 +64,8 @@ void Loop::sendPositions() {
 
     for (const auto &packet: packets) {
         auto buf = serializeOpponentPositionsPacket(packet);
-        std::cout << "Packet size before serializing/deserializing: " << getOpponentPositionsPacketSize(packet) <<
-                std::endl;
-
-        const auto packet2 = deserializeOpponentPositionsPacket(buf, getOpponentPositionsPacketSize(packet));
-        std::cout << "Packet size after serializing/deserializing: " << getOpponentPositionsPacketSize(packet2) <<
-                std::endl;
-        // server->sendToAll(buf.get(), sizeof(packet));
+        /* TODO: Player should not get their own positions */
+        server->sendToAll(buf.get(), static_cast<ssize_t>(getOpponentPositionsPacketSize(packet)));
     }
 }
 

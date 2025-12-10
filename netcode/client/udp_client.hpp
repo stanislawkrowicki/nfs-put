@@ -6,8 +6,12 @@
 #include "LinearMath/btTransform.h"
 
 class UDPClient {
+    static constexpr int MAX_MESSAGE_SIZE = 512;
+
     int socketFd = -1;
     long lastPacketId = 0;
+    uint16_t clientId{};
+    volatile bool waitForMessages = false;
 
 public:
     explicit UDPClient();
@@ -21,4 +25,12 @@ public:
     void sendStartMessage() const;
 
     void sendPosition(const btTransform &transform);
+
+    void handlePacket(const PacketBuffer &buf, ssize_t size) const;
+
+    void listen();
+
+    void stopListening();
+
+    void close();
 };

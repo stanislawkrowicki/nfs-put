@@ -39,6 +39,9 @@ public:
     btRaycastVehicle *getBtVehicle() const;
 
     [[nodiscard]]
+    btRigidBody *getBtChassis() const;
+
+    [[nodiscard]]
     std::string getName() const;
 
     [[nodiscard]]

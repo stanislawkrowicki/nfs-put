@@ -78,6 +78,7 @@ public:
         return calculatePacketChecksum(buffer, sizeof(T));
     }
 
+    /* The size of the buffer you provide must include the checksum field (4 bytes) */
     static uint32_t calculatePacketChecksum(const PacketBuffer &buffer, const size_t size) {
         return CRC32::calculate(buffer.get(), size - sizeof(uint32_t));
     }

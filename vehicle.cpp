@@ -106,6 +106,10 @@ btRaycastVehicle *Vehicle::getBtVehicle() const {
     return btVehicle;
 }
 
+btRigidBody *Vehicle::getBtChassis() const {
+    return chassis;
+}
+
 std::string Vehicle::getName() const {
     return config.name;
 }

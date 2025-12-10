@@ -1,13 +1,12 @@
 #include "udp_client.hpp"
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <cstring>
 #include <format>
 #include <iostream>
-#include <utility>
 #include <netdb.h>
 
 #include "../shared/packets/udp/client/position_packet.hpp"
+#include "handlers/position_response_handler.hpp"
 
 UDPClient::UDPClient() {
     addrinfo hints{};
@@ -38,8 +37,7 @@ UDPClient::UDPClient() {
     freeaddrinfo(result);
 
     if (!connectedSuccessfully) {
-        ::close(socketFd);
-        socketFd = -1;
+        close();
         throw std::runtime_error(std::format("Failed to connect to the server with IP {} and port {}.", SERVER_IP,
                                              SERVER_PORT));
     }
@@ -47,7 +45,7 @@ UDPClient::UDPClient() {
 
 UDPClient::~UDPClient() {
     if (socketFd >= 0)
-        close(socketFd);
+        ::close(socketFd);
 }
 
 void UDPClient::send(const char *data, const ssize_t size) const {
@@ -74,3 +72,68 @@ void UDPClient::sendPosition(const btTransform &transform) {
     send(UDPPacket::serialize(packet), sizeof(packet));
     lastPacketId++;
 }
+
+void UDPClient::handlePacket(const PacketBuffer &buf, const ssize_t size) const {
+    const bool isValid = UDPPacket::validate(buf, size);
+    if (!isValid) {
+        std::cerr << "Received a packet with invalid checksum." << std::endl;
+        return;
+    }
+
+    UDPPacketType type;
+    std::memcpy(&type, buf.get(), sizeof(UDPPacketType));
+
+    try {
+        switch (type) {
+            case UDPPacketType::PositionResponse:
+                PositionResponseHandler::handle(buf, size, clientId);
+                break;
+
+            default:
+                std::cerr << "Received packet with unknown type!" << std::endl;
+        }
+    } catch (DeserializationError &e) {
+        std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
+    }
+}
+
+void UDPClient::listen() {
+    sendStartMessage();
+
+    char idBuf[2];
+
+    const ssize_t responseBytes = ::read(socketFd, idBuf, 2);
+    if (responseBytes <= 0) {
+        std::cerr << "Failed to get user id response: " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::memcpy(&clientId, idBuf, 2);
+
+    std::cout << "Client ID: " << clientId << std::endl;
+
+    waitForMessages = true;
+
+    while (waitForMessages) {
+        auto buf = std::make_unique<char []>(MAX_MESSAGE_SIZE);
+        const ssize_t bytesRead = ::read(socketFd, buf.get(), MAX_MESSAGE_SIZE);
+
+        if (bytesRead < 0) {
+            std::cerr << "Error while reading data from UDP connection: " << strerror(errno) << std::endl;
+            continue;
+        }
+
+        handlePacket(buf, bytesRead);
+    }
+}
+
+void UDPClient::stopListening() {
+    waitForMessages = false;
+}
+
+void UDPClient::close() {
+    ::close(socketFd);
+    socketFd = -1;
+}
+
+
