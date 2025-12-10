@@ -2,8 +2,8 @@
 #include <cstdint>
 #include <iostream>
 
-#include "packet_header.hpp"
-#include "udp_packet.hpp"
+#include "../packet_header.hpp"
+#include "../udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
 constexpr int POSITION_PAYLOAD_SIZE = 64;

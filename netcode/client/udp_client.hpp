@@ -5,14 +5,14 @@
 #include "../shared/packets/udp/udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
-class Client {
+class UDPClient {
     int socketFd = -1;
     long lastPacketId = 0;
 
 public:
-    explicit Client();
+    explicit UDPClient();
 
-    ~Client();
+    ~UDPClient();
 
     void send(const char *data, ssize_t size) const;
 

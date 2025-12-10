@@ -1,4 +1,4 @@
-#include "client.hpp"
+#include "udp_client.hpp"
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
@@ -7,9 +7,9 @@
 #include <utility>
 #include <netdb.h>
 
-#include "netcode/shared/packets/udp/position_packet.hpp"
+#include "../shared/packets/udp/client/position_packet.hpp"
 
-Client::Client() {
+UDPClient::UDPClient() {
     addrinfo hints{};
     addrinfo *result{};
 
@@ -45,25 +45,25 @@ Client::Client() {
     }
 }
 
-Client::~Client() {
+UDPClient::~UDPClient() {
     if (socketFd >= 0)
         close(socketFd);
 }
 
-void Client::send(const char *data, const ssize_t size) const {
+void UDPClient::send(const char *data, const ssize_t size) const {
     write(socketFd, data, size);
 }
 
-void Client::send(const PacketBuffer &data, const ssize_t size) const {
+void UDPClient::send(const PacketBuffer &data, const ssize_t size) const {
     write(socketFd, data.get(), size);
 }
 
-void Client::sendStartMessage() const {
+void UDPClient::sendStartMessage() const {
     constexpr char message[] = "1";
     send(message, 1);
 }
 
-void Client::sendPosition(const btTransform &transform) {
+void UDPClient::sendPosition(const btTransform &transform) {
     btTransformFloatData floatData{};
     transform.serialize(floatData);
 

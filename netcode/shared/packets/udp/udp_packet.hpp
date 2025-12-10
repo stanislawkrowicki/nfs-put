@@ -23,7 +23,6 @@ class UDPPacket {
     static uint32_t calculatePacketChecksum(const PacketBuffer &buffer, const size_t size) {
         return CRC32::calculate(buffer.get(), size - sizeof(uint32_t));
     }
-
 public:
     template<typename T>
     static PacketBuffer serialize(const T &packet) {
@@ -44,10 +43,6 @@ public:
 
         T packet{};
         std::memcpy(&packet, buffer.get(), expectedSize);
-
-        if (!validate(buffer, size)) {
-            throw DeserializationError("Received packet with an invalid checksum");
-        }
 
         return packet;
     }
@@ -73,6 +68,10 @@ public:
 
     static bool validate(const PacketBuffer &packet, const size_t size) {
         constexpr size_t checksumSize = sizeof(uint32_t);
+
+        if (size < checksumSize)
+            return false;
+
         uint32_t expectedChecksum;
         const char *checksumAddress = packet.get() + (size - checksumSize);
 

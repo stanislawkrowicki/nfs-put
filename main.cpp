@@ -23,7 +23,7 @@
 #include "skybox.hpp"
 #include "opponent_path.hpp"
 #include "debug.hpp"
-#include "netcode/client/client.hpp"
+#include "netcode/client/udp_client.hpp"
 #include <chrono>
 
 using namespace std::chrono;
@@ -388,7 +388,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    const auto client = new Client();
+    const auto client = new UDPClient();
     client->sendStartMessage();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);

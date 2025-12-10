@@ -15,12 +15,13 @@ add_executable(server
         loop.cpp
         loop.hpp
         ../shared/packets/udp/udp_packet.hpp
-        ../shared/packets/udp/position_packet.hpp
+        ../shared/packets/udp/client/position_packet.hpp
         ../shared/packets/udp/packet_header.hpp
         ../shared/crc32.hpp
         ../shared/crc32.cpp
         ../shared/deserialization_error.hpp
-        ../shared/packets/udp/udp_packet_type.hpp)
+        ../shared/packets/udp/udp_packet_type.hpp
+        handlers/position_handler.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 

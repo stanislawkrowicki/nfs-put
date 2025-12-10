@@ -1,14 +1,20 @@
 #pragma once
 #include "udp_server.hpp"
+#include "../shared/packets/udp/udp_packet.hpp"
+#include <vector>
 
 class Loop {
-private:
-    UDPServer server;
-    const int TICK_RATE = 32;
-    bool exit;
+    static constexpr int TICK_RATE = 32;
+    static bool exit;
 
-    void sendMessageToAll() const;
+    static std::shared_ptr<UDPServer> server;
+
+    static std::vector<PacketBuffer> packetsToSend;
+
+    static void sendMessageToAll();
 
 public:
-    explicit Loop(const UDPServer &server);
+    static void run(const std::shared_ptr<UDPServer> &udpServer);
+
+    static void enqueuePacket();
 };

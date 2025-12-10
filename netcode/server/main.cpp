@@ -15,14 +15,14 @@ int main(const int argc, char *argv[]) {
 
     const auto clientManager = std::make_shared<ClientManager>();
 
-    const auto udpServer = std::make_unique<UDPServer>(clientManager);
+    const auto udpServer = std::make_shared<UDPServer>(clientManager);
 
     std::thread udpServerThread([&] {
         udpServer->listen(argv[1]);
     });
 
     std::thread gameLoopThread([&] {
-        new Loop(*udpServer);
+        Loop::run(udpServer);
     });
 
     udpServerThread.join();

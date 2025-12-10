@@ -6,9 +6,11 @@
 #include <iostream>
 #include <utility>
 #include <netdb.h>
+#include <ranges>
 
 #include "../shared/packets/udp/udp_packet.hpp"
-#include "../shared/packets/udp/position_packet.hpp"
+#include "../shared/packets/udp/client/position_packet.hpp"
+#include "handlers/position_handler.hpp"
 
 UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
     socketFd = ::socket(AF_INET, SOCK_DGRAM, 0);
@@ -54,8 +56,15 @@ void UDPServer::send(const ClientHandle client, const char *data, const ssize_t 
 }
 
 void UDPServer::sendToAll(const char *data, const ssize_t size) const {
-    for (auto [_, client]: clientManager->getAllClients()) {
+    for (const auto client: clientManager->getAllClients() | std::views::values) {
         send(client, data, size);
+    }
+}
+
+void UDPServer::sendToAllExcept(const char *data, const ssize_t size, const ClientHandle &except) const {
+    for (const auto client: clientManager->getAllClients() | std::views::values) {
+        if (client.id != except.id)
+            send(client, data, size);
     }
 }
 
@@ -82,14 +91,6 @@ void UDPServer::loop() const {
             continue;
         }
 
-        // auto packet = Packet{
-        //     .data = std::move(buf),
-        //     .size = bytesRead,
-        //     .sender = client
-        // };
-
-        // parsePacket(packet);
-
         parseBuf(buf, bytesRead);
     }
 }
@@ -102,5 +103,28 @@ void UDPServer::parseBuf(PacketBuffer &buf, const ssize_t size) const {
         std::cout << std::format("{} {} {} {}", floats[0], floats[1], floats[2], floats[3]) << std::endl;
     } catch (DeserializationError &e) {
         std::cerr << "Error while deserializing: " << e.what() << std::endl;
+    }
+}
+
+void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size) const {
+    const bool isValid = UDPPacket::validate(buf, size);
+    if (!isValid) {
+        std::cerr << "Received a packet with invalid checksum." << std::endl;
+        return;
+    }
+
+    UDPPacketType type;
+    std::memcpy(&type, buf.get(), sizeof(UDPPacketType));
+
+    try {
+        switch (type) {
+            case UDPPacketType::Position:
+                PositionHandler::handle(UDPPacket::deserialize<PositionPacket>(buf, size), this);
+                break;
+            default:
+                std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;
+        }
+    } catch (DeserializationError &e) {
+        std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
     }
 }
