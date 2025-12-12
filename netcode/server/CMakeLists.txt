@@ -23,7 +23,8 @@ add_executable(server
         ../shared/packets/udp/udp_packet_type.hpp
         handlers/position_handler.hpp
         ../shared/packets/udp/server/opponent_positions_packet.hpp
-        ../shared/player_position.hpp)
+        ../shared/player_position.hpp
+        ../shared/utils/byte_dump.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 
