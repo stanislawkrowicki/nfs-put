@@ -11,7 +11,9 @@ public:
         if (packet.header.id < client.lastReceivedPacketId)
             return;
 
-        const PlayerPosition position{client.id, *packet.payload};
+        PlayerPosition position{client.id};
+        std::memcpy(position.position, packet.payload, 64);
+
         Loop::enqueuePositionUpdate(position);
     }
 };
