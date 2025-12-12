@@ -23,7 +23,9 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer) {
     while (!exit) {
         nextTick = nextTick + tickDuration;
 
-        sendPositions();
+        if (!positionsToUpdate.empty()) {
+            sendPositions();
+        }
 
         if (tickCounter % 100 == 0) {
             std::cout << std::format("Finished tick {}, time until next tick is {}", tickCounter,
