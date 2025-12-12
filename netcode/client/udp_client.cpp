@@ -6,7 +6,7 @@
 #include <netdb.h>
 
 #include "../shared/packets/udp/client/position_packet.hpp"
-#include "handlers/position_response_handler.hpp"
+#include "handlers/opponent_states_handler.hpp"
 
 UDPClient::UDPClient() {
     addrinfo hints{};
@@ -86,7 +86,7 @@ void UDPClient::handlePacket(const PacketBuffer &buf, const ssize_t size) const 
     try {
         switch (type) {
             case UDPPacketType::PositionResponse:
-                PositionResponseHandler::handle(buf, size, clientId);
+                OpponentStatesHandler::handle(buf, size, clientId);
                 break;
 
             default:

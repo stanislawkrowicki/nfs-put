@@ -93,8 +93,8 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/deserialization_error.hpp
         netcode/shared/packets/udp/udp_packet_type.hpp
         netcode/shared/packets/udp/server/opponent_positions_packet.hpp
-        netcode/shared/player_position.hpp
-        netcode/client/handlers/position_response_handler.hpp
+        netcode/shared/client_state.hpp
+        netcode/client/handlers/opponent_states_handler.hpp
         netcode/client/opponent_vehicle_map.hpp
         default_vehicle_model.hpp
         netcode/shared/utils/byte_dump.hpp

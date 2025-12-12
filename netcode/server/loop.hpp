@@ -11,16 +11,16 @@ class Loop {
 
     static std::shared_ptr<UDPServer> server;
 
-    static std::vector<PlayerPosition> positionsToUpdate;
+    static std::vector<ClientState> statesToUpdate;
 
     static void sendMessageToAll();
 
-    static void sendPositions();
+    static void sendStates();
 
-    static OpponentPositionsPacket packPositionsBatch(const std::vector<PlayerPosition> &batch);
+    static OpponentStatesPacket packStatesBatch(const std::vector<ClientState> &batch);
 
 public:
     static void run(const std::shared_ptr<UDPServer> &udpServer);
 
-    static void enqueuePositionUpdate(const PlayerPosition &position);
+    static void enqueueStateUpdate(const ClientState &state);
 };

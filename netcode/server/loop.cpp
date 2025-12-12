@@ -10,7 +10,7 @@ using namespace std::chrono;
 
 std::shared_ptr<UDPServer> Loop::server;
 bool Loop::exit = false;
-std::vector<PlayerPosition> Loop::positionsToUpdate{};
+std::vector<ClientState> Loop::statesToUpdate{};
 
 void Loop::run(const std::shared_ptr<UDPServer> &udpServer) {
     server = udpServer;
@@ -23,8 +23,8 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer) {
     while (!exit) {
         nextTick = nextTick + tickDuration;
 
-        if (!positionsToUpdate.empty()) {
-            sendPositions();
+        if (!statesToUpdate.empty()) {
+            sendStates();
         }
 
         if (tickCounter % 100 == 0) {
@@ -38,8 +38,8 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer) {
     }
 }
 
-void Loop::enqueuePositionUpdate(const PlayerPosition &position) {
-    positionsToUpdate.push_back(position);
+void Loop::enqueueStateUpdate(const ClientState &state) {
+    statesToUpdate.push_back(state);
 }
 
 void Loop::sendMessageToAll() {
@@ -47,40 +47,40 @@ void Loop::sendMessageToAll() {
     server->sendToAll(message, sizeof(message));
 }
 
-/* TODO: Make this thread safe (positionsToUpdate can be updated while this function is executing) */
-void Loop::sendPositions() {
+/* TODO: Make this thread safe (statesToUpdate can be updated while this function is executing) */
+void Loop::sendStates() {
     constexpr int POSITIONS_PER_PACKET = 5;
 
-    std::vector<OpponentPositionsPacket> packets;
+    std::vector<OpponentStatesPacket> packets;
 
-    for (long i = 0; i < positionsToUpdate.size(); i += POSITIONS_PER_PACKET) {
-        const long currentBatchSize = std::min(POSITIONS_PER_PACKET, static_cast<int>(positionsToUpdate.size() - i));
+    for (long i = 0; i < statesToUpdate.size(); i += POSITIONS_PER_PACKET) {
+        const long currentBatchSize = std::min(POSITIONS_PER_PACKET, static_cast<int>(statesToUpdate.size() - i));
 
-        std::vector batch(positionsToUpdate.begin() + i,
-                          positionsToUpdate.begin() + i + currentBatchSize);
+        std::vector batch(statesToUpdate.begin() + i,
+                          statesToUpdate.begin() + i + currentBatchSize);
 
-        packets.push_back(packPositionsBatch(batch));
+        packets.push_back(packStatesBatch(batch));
     }
 
-    positionsToUpdate.clear();
+    statesToUpdate.clear();
 
     for (const auto &packet: packets) {
-        auto buf = serializeOpponentPositionsPacket(packet);
+        auto buf = serializeOpponentPositions(packet);
         /* TODO: Player should not get their own positions */
         server->sendToAll(buf.get(), static_cast<ssize_t>(getOpponentPositionsPacketSize(packet)));
     }
 }
 
-OpponentPositionsPacket Loop::packPositionsBatch(const std::vector<PlayerPosition> &batch) {
-    OpponentPositionsPacket packet;
+OpponentStatesPacket Loop::packStatesBatch(const std::vector<ClientState> &batch) {
+    OpponentStatesPacket packet;
 
     packet.header = {
         .type = UDPPacketType::PositionResponse,
         .id = 0,
     };
 
-    packet.positionsCount = batch.size();
-    packet.positions = batch;
+    packet.statesCount = batch.size();
+    packet.states = batch;
 
     // TODO: Add missing checksum
     return packet;
