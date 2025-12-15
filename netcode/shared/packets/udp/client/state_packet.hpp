@@ -6,16 +6,18 @@
 #include "../udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
-constexpr int POSITION_PAYLOAD_SIZE = 64;
+typedef char StateBuffer[80];
 
-struct __attribute__((packed)) PositionPacket {
+constexpr int STATE_PAYLOAD_SIZE = 80;
+
+struct __attribute__((packed)) StatePacket {
     UDPPacketHeader header;
-    char payload[POSITION_PAYLOAD_SIZE];
+    char payload[STATE_PAYLOAD_SIZE];
     uint32_t checksum;
 };
 
 inline btTransform deserializePosition(const PacketBuffer &packet, const size_t size) {
-    const auto deserialized = UDPPacket::deserialize<PositionPacket>(packet, size);
+    const auto deserialized = UDPPacket::deserialize<StatePacket>(packet, size);
 
     btTransform transform;
     btTransformFloatData floatData{};

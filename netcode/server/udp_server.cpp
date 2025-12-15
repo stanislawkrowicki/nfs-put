@@ -9,7 +9,7 @@
 #include <ranges>
 
 #include "../shared/packets/udp/udp_packet.hpp"
-#include "../shared/packets/udp/client/position_packet.hpp"
+#include "../shared/packets/udp/client/state_packet.hpp"
 #include "handlers/state_handler.hpp"
 
 UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
@@ -122,7 +122,7 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, const 
     try {
         switch (type) {
             case UDPPacketType::Position:
-                StateHandler::handle(UDPPacket::deserialize<PositionPacket>(buf, size), client);
+                StateHandler::handle(UDPPacket::deserialize<StatePacket>(buf, size), client);
                 break;
             default:
                 std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;

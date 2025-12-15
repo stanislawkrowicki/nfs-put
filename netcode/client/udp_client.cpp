@@ -5,7 +5,7 @@
 #include <iostream>
 #include <netdb.h>
 
-#include "../shared/packets/udp/client/position_packet.hpp"
+#include "../shared/packets/udp/client/state_packet.hpp"
 #include "handlers/opponent_states_handler.hpp"
 
 UDPClient::UDPClient() {
@@ -61,13 +61,32 @@ void UDPClient::sendStartMessage() const {
     send(message, 1);
 }
 
-void UDPClient::sendPosition(const btTransform &transform) {
-    btTransformFloatData floatData{};
-    transform.serialize(floatData);
+void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle) {
+    const auto btVehicle = vehicle->getBtVehicle();
 
-    const auto packet = UDPPacket::create<PositionPacket>(UDPPacketType::Position, lastPacketId,
-                                                          reinterpret_cast<const char *>(&floatData),
-                                                          64);
+    const auto transform = btVehicle->getChassisWorldTransform();
+    const auto velocity = btVehicle->getRigidBody()->getLinearVelocity();
+    const auto steeringAngle = btVehicle->getSteeringValue(0);
+
+    btTransformFloatData transformData{};
+    transform.serialize(transformData);
+
+    float velocityData[3];
+    velocityData[0] = velocity.getX();
+    velocityData[1] = velocity.getY();
+    velocityData[2] = velocity.getZ();
+
+    constexpr auto transformSize = sizeof(btTransformFloatData);
+    constexpr auto velocitySize = sizeof(velocityData);
+    constexpr auto steeringAngleSize = sizeof(btScalar);
+
+    StateBuffer buf;
+
+    std::memcpy(buf, &transformData, transformSize);
+    std::memcpy(buf + transformSize, &velocityData, velocitySize);
+    std::memcpy(buf + transformSize + velocitySize, &steeringAngle, 4);
+
+    const auto packet = UDPPacket::create<StatePacket>(UDPPacketType::Position, lastPacketId, buf, 80);
 
     send(UDPPacket::serialize(packet), sizeof(packet));
     lastPacketId++;

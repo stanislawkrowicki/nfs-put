@@ -86,7 +86,7 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/client/udp_client.cpp
         netcode/client/udp_client.hpp
         netcode/shared/packets/udp/udp_packet.hpp
-        netcode/shared/packets/udp/client/position_packet.hpp
+        netcode/shared/packets/udp/client/state_packet.hpp
         netcode/shared/packets/udp/packet_header.hpp
         netcode/shared/crc32.hpp
         netcode/shared/crc32.cpp

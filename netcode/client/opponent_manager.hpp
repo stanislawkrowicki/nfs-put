@@ -20,7 +20,7 @@ public:
 
     OpponentManager &operator=(OpponentManager &&) = delete;
 
-    void updateOpponent(uint16_t clientId, const char *position);
+    void updateOpponent(uint16_t clientId, const char *state);
 
     void addNewOpponent(uint16_t clientId);
 };

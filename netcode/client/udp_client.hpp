@@ -2,6 +2,7 @@
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT "1313"
+#include "vehicle.hpp"
 #include "../shared/packets/udp/udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
@@ -24,7 +25,7 @@ public:
 
     void sendStartMessage() const;
 
-    void sendPosition(const btTransform &transform);
+    void sendVehicleState(const std::shared_ptr<Vehicle> &vehicle);
 
     void handlePacket(const PacketBuffer &buf, ssize_t size) const;
 

@@ -27,9 +27,9 @@ inline PacketBuffer serializeOpponentPositions(const OpponentStatesPacket &packe
     std::memcpy(buf.get() + currentSize, &packet.statesCount, sizeof(packet.statesCount));
     currentSize += sizeof(packet.statesCount);
 
-    for (const auto &position: packet.states) {
-        std::memcpy(buf.get() + currentSize, &position, sizeof(position));
-        currentSize += sizeof(position);
+    for (const auto &state: packet.states) {
+        std::memcpy(buf.get() + currentSize, &state, sizeof(state));
+        currentSize += sizeof(state);
     }
 
     const auto checksum = UDPPacket::calculatePacketChecksum(buf, currentSize + sizeof(packet.checksum));
@@ -62,10 +62,10 @@ inline OpponentStatesPacket deserializeOpponentPositions(const PacketBuffer &buf
     currentOffset += sizeof(packet.statesCount);
 
     for (int i = 0; i < packet.statesCount; ++i) {
-        ClientState pos{};
-        std::memcpy(&pos, buf.get() + currentOffset, sizeof(ClientState));
+        ClientState state{};
+        std::memcpy(&state, buf.get() + currentOffset, sizeof(ClientState));
 
-        packet.states.push_back(pos);
+        packet.states.push_back(state);
         currentOffset += sizeof(ClientState);
     }
 

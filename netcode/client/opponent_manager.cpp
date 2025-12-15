@@ -8,7 +8,7 @@ OpponentManager &OpponentManager::getInstance() {
     return instance;
 }
 
-void OpponentManager::updateOpponent(const uint16_t clientId, const char *position) {
+void OpponentManager::updateOpponent(const uint16_t clientId, const char *state) {
     const auto vehicle = vehicleMap.find(clientId);
 
     if (vehicle == vehicleMap.end()) {
@@ -17,11 +17,19 @@ void OpponentManager::updateOpponent(const uint16_t clientId, const char *positi
     }
 
     btTransform transform;
-    btTransformFloatData floatData{};
+    float velocityData[3];
+    btScalar steeringAngle;
 
-    std::memcpy(&floatData, position, sizeof(floatData));
+    btTransformFloatData transformData{};
 
-    transform.deSerialize(floatData);
+    std::memcpy(&transformData, state, sizeof(transformData));
+    std::memcpy(&velocityData, state + sizeof(transformData), sizeof(velocityData));
+    std::memcpy(&steeringAngle, state + sizeof(transformData) + sizeof(velocityData), sizeof(btScalar));
+
+    transform.deSerialize(transformData);
+    const auto velocity = btVector3(velocityData[0], velocityData[1], velocityData[2]);
+
+    const auto btVehicle = vehicle->second->getBtVehicle();
 
     auto *motionState = dynamic_cast<btDefaultMotionState *>(vehicle->second->
         getBtChassis()->getMotionState());
@@ -30,8 +38,11 @@ void OpponentManager::updateOpponent(const uint16_t clientId, const char *positi
         motionState->setWorldTransform(transform);
     }
 
-    vehicle->second->getBtVehicle()->getRigidBody()->setWorldTransform(
+    btVehicle->getRigidBody()->setWorldTransform(
         transform);
+    btVehicle->getRigidBody()->setLinearVelocity(velocity);
+    btVehicle->setSteeringValue(steeringAngle, 0);
+    btVehicle->setSteeringValue(steeringAngle, 1);
 }
 
 void OpponentManager::addNewOpponent(uint16_t clientId) {

@@ -523,9 +523,8 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
-        if (steady_clock::now() - lastTick > milliseconds(1000 / 32)) {
-            const auto transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
-            client->sendPosition(transform);
+        if (steady_clock::now() - lastTick > milliseconds(1000)) {
+            client->sendVehicleState(playerVehicle);
             lastTick = steady_clock::now();
         }
 
