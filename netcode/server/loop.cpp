@@ -42,11 +42,6 @@ void Loop::enqueueStateUpdate(const ClientState &state) {
     statesToUpdate.push_back(state);
 }
 
-void Loop::sendMessageToAll() {
-    constexpr char message[] = "Hello this is a tick!\n";
-    server->sendToAll(message, sizeof(message));
-}
-
 /* TODO: Make this thread safe (statesToUpdate can be updated while this function is executing) */
 void Loop::sendStates() {
     constexpr int POSITIONS_PER_PACKET = 5;
@@ -67,7 +62,7 @@ void Loop::sendStates() {
     for (const auto &packet: packets) {
         auto buf = serializeOpponentState(packet);
         /* TODO: Player should not get their own positions */
-        server->sendToAll(buf.get(), static_cast<ssize_t>(getOpponentStatePacketSize(packet)));
+        server->sendToAll(buf, static_cast<ssize_t>(getOpponentStatePacketSize(packet)));
     }
 }
 

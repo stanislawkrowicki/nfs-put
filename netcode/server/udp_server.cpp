@@ -42,26 +42,27 @@ void UDPServer::listen(const char *port) {
     loop();
 }
 
-void UDPServer::send(const ClientHandle client, const char *data, const ssize_t size) const {
+void UDPServer::send(const ClientHandle client, const PacketBuffer &data, const ssize_t size) const {
     if (!client.connected) {
         std::cout << "Tried to send to not connected" << std::endl;
         return;
     }
 
-    const ssize_t bytesSent = ::sendto(socketFd, data, size, 0, reinterpret_cast<const sockaddr *>(&client.address),
+    const ssize_t bytesSent = ::sendto(socketFd, data.get(), size, 0,
+                                       reinterpret_cast<const sockaddr *>(&client.address),
                                        sizeof(client.address));
 
     if (bytesSent <= 0)
         throw std::runtime_error(std::string("Failed to UDP message: ") + strerror(errno));
 }
 
-void UDPServer::sendToAll(const char *data, const ssize_t size) const {
+void UDPServer::sendToAll(const PacketBuffer &data, const ssize_t size) const {
     for (const auto client: clientManager->getAllClients() | std::views::values) {
         send(client, data, size);
     }
 }
 
-void UDPServer::sendToAllExcept(const char *data, const ssize_t size, const ClientHandle &except) const {
+void UDPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const ClientHandle &except) const {
     for (const auto client: clientManager->getAllClients() | std::views::values) {
         if (client.id != except.id)
             send(client, data, size);
@@ -88,8 +89,8 @@ void UDPServer::loop() const {
 
         if (!client) {
             client = clientManager->newClient(sender);
-            char idBuf[2];
-            std::memcpy(idBuf, &client->id, 2);
+            auto idBuf = std::make_unique<char[]>(2);
+            std::memcpy(idBuf.get(), &client->id, 2);
             send(*client, idBuf, 2);
             continue;
         }
