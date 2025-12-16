@@ -11,7 +11,7 @@
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
-constexpr int MAX_PAYLOAD_SIZE = 80;
+constexpr int MAX_PAYLOAD_SIZE = 81;
 
 class UDPPacket {
 public:

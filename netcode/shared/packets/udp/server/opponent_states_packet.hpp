@@ -10,15 +10,15 @@ struct OpponentStatesPacket {
     uint32_t checksum;
 };
 
-inline size_t getOpponentPositionsPacketSize(const OpponentStatesPacket &packet) {
+inline size_t getOpponentStatePacketSize(const OpponentStatesPacket &packet) {
     return sizeof(packet.header)
            + sizeof(packet.statesCount)
            + sizeof(ClientState) * packet.statesCount
            + sizeof(packet.checksum);
 }
 
-inline PacketBuffer serializeOpponentPositions(const OpponentStatesPacket &packet) {
-    auto buf = std::make_unique<char[]>(getOpponentPositionsPacketSize(packet));
+inline PacketBuffer serializeOpponentState(const OpponentStatesPacket &packet) {
+    auto buf = std::make_unique<char[]>(getOpponentStatePacketSize(packet));
     size_t currentSize = 0;
 
     std::memcpy(buf.get(), &packet.header, sizeof(packet.header));
@@ -38,7 +38,7 @@ inline PacketBuffer serializeOpponentPositions(const OpponentStatesPacket &packe
     return buf;
 }
 
-inline OpponentStatesPacket deserializeOpponentPositions(const PacketBuffer &buf, const ssize_t size) {
+inline OpponentStatesPacket deserializeOpponentState(const PacketBuffer &buf, const ssize_t size) {
     OpponentStatesPacket packet;
     constexpr size_t checksumSize = sizeof(packet.checksum);
 

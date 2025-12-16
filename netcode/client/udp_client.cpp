@@ -7,6 +7,7 @@
 
 #include "../shared/packets/udp/client/state_packet.hpp"
 #include "handlers/opponent_states_handler.hpp"
+#include "netcode/shared/client_inputs.hpp"
 
 UDPClient::UDPClient() {
     addrinfo hints{};
@@ -61,7 +62,7 @@ void UDPClient::sendStartMessage() const {
     send(message, 1);
 }
 
-void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle) {
+void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle, ClientInputs inputs) {
     const auto btVehicle = vehicle->getBtVehicle();
 
     const auto transform = btVehicle->getChassisWorldTransform();
@@ -84,9 +85,10 @@ void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle) {
 
     std::memcpy(buf, &transformData, transformSize);
     std::memcpy(buf + transformSize, &velocityData, velocitySize);
-    std::memcpy(buf + transformSize + velocitySize, &steeringAngle, 4);
+    std::memcpy(buf + transformSize + velocitySize, &steeringAngle, steeringAngleSize);
+    std::memcpy(buf + sizeof(buf) - sizeof(inputs), &inputs, sizeof(inputs));
 
-    const auto packet = UDPPacket::create<StatePacket>(UDPPacketType::Position, lastPacketId, buf, 80);
+    const auto packet = UDPPacket::create<StatePacket>(UDPPacketType::Position, lastPacketId, buf, STATE_PAYLOAD_SIZE);
 
     send(UDPPacket::serialize(packet), sizeof(packet));
     lastPacketId++;

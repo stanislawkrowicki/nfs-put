@@ -5,6 +5,7 @@
 #include "vehicle.hpp"
 #include "../shared/packets/udp/udp_packet.hpp"
 #include "LinearMath/btTransform.h"
+#include "netcode/shared/client_inputs.hpp"
 
 class UDPClient {
     static constexpr int MAX_MESSAGE_SIZE = 512;
@@ -25,7 +26,7 @@ public:
 
     void sendStartMessage() const;
 
-    void sendVehicleState(const std::shared_ptr<Vehicle> &vehicle);
+    void sendVehicleState(const std::shared_ptr<Vehicle> &vehicle, ClientInputs inputs);
 
     void handlePacket(const PacketBuffer &buf, ssize_t size) const;
 

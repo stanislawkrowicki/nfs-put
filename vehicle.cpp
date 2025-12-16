@@ -164,7 +164,7 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
     btVehicle->setBrake(appliedHandbrakeForce, 2); // Rear left
     btVehicle->setBrake(appliedHandbrakeForce, 3); // Rear right
 
-    static float steering = 0.0f;
+    float steering = lastSteering;
 
     /** See config.steeringIncrement comment */
     constexpr float steeringMultiplicationFactor = 60;
@@ -188,6 +188,8 @@ void Vehicle::updateControls(const bool forward, const bool backward, const bool
 
     btVehicle->setSteeringValue(steering, 0); // Front left
     btVehicle->setSteeringValue(steering, 1); // Front right;
+
+    lastSteering = steering;
 }
 
 void Vehicle::aiUpdateControls(const bool forward, const bool backward, const float steering) {

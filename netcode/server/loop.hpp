@@ -3,7 +3,7 @@
 #include "../shared/packets/udp/udp_packet.hpp"
 #include <vector>
 
-#include "../shared/packets/udp/server/opponent_positions_packet.hpp"
+#include "../shared/packets/udp/server/opponent_states_packet.hpp"
 
 class Loop {
     static constexpr int TICK_RATE = 32;

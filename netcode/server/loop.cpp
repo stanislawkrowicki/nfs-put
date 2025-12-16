@@ -65,9 +65,9 @@ void Loop::sendStates() {
     statesToUpdate.clear();
 
     for (const auto &packet: packets) {
-        auto buf = serializeOpponentPositions(packet);
+        auto buf = serializeOpponentState(packet);
         /* TODO: Player should not get their own positions */
-        server->sendToAll(buf.get(), static_cast<ssize_t>(getOpponentPositionsPacketSize(packet)));
+        server->sendToAll(buf.get(), static_cast<ssize_t>(getOpponentStatePacketSize(packet)));
     }
 }
 

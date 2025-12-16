@@ -28,6 +28,8 @@
 #include <thread>
 
 #include "default_vehicle_model.hpp"
+#include "netcode/client/opponent_manager.hpp"
+#include "netcode/shared/client_inputs.hpp"
 
 using namespace std::chrono;
 
@@ -519,17 +521,30 @@ int main() {
 
     // opponent = new Opponent(opponentVehicle);
 
+    auto &opponentManager = OpponentManager::getInstance();
+
     auto lastTick = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
+
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
-        if (steady_clock::now() - lastTick > milliseconds(1000)) {
-            client->sendVehicleState(playerVehicle);
+        if (steady_clock::now() - lastTick > milliseconds(1000 / 32)) {
+            const bool left = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+            const bool right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+            const bool handbrake = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+            const bool forward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+            const bool backward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+
+            const auto inputBitmap = buildInputBitmap(left, right, handbrake, forward, backward);
+
+            client->sendVehicleState(playerVehicle, inputBitmap);
             lastTick = steady_clock::now();
         }
 
         processInput(window);
         processVehicleInputs(window, playerVehicle, deltaTime);
+
+        opponentManager.applyLastInputs(deltaTime);
 
         // opponent->updateSteering();
 

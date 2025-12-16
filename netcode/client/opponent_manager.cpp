@@ -2,13 +2,15 @@
 
 #include "default_vehicle_model.hpp"
 #include "vehicle_manager.hpp"
+#include "netcode/shared/client_inputs.hpp"
+#include "netcode/shared/packets/udp/client/state_packet.hpp"
 
 OpponentManager &OpponentManager::getInstance() {
     static OpponentManager instance;
     return instance;
 }
 
-void OpponentManager::updateOpponent(const uint16_t clientId, const char *state) {
+void OpponentManager::updateOpponentState(const uint16_t clientId, const char *state) {
     const auto vehicle = vehicleMap.find(clientId);
 
     if (vehicle == vehicleMap.end()) {
@@ -19,12 +21,14 @@ void OpponentManager::updateOpponent(const uint16_t clientId, const char *state)
     btTransform transform;
     float velocityData[3];
     btScalar steeringAngle;
+    ClientInputs inputs;
 
     btTransformFloatData transformData{};
 
     std::memcpy(&transformData, state, sizeof(transformData));
     std::memcpy(&velocityData, state + sizeof(transformData), sizeof(velocityData));
-    std::memcpy(&steeringAngle, state + sizeof(transformData) + sizeof(velocityData), sizeof(btScalar));
+    std::memcpy(&steeringAngle, state + sizeof(transformData) + sizeof(velocityData), sizeof(steeringAngle));
+    std::memcpy(&inputs, state + STATE_PAYLOAD_SIZE - sizeof(inputs), sizeof(inputs));
 
     transform.deSerialize(transformData);
     const auto velocity = btVector3(velocityData[0], velocityData[1], velocityData[2]);
@@ -38,11 +42,12 @@ void OpponentManager::updateOpponent(const uint16_t clientId, const char *state)
         motionState->setWorldTransform(transform);
     }
 
-    btVehicle->getRigidBody()->setWorldTransform(
-        transform);
+    btVehicle->getRigidBody()->setWorldTransform(transform);
     btVehicle->getRigidBody()->setLinearVelocity(velocity);
     btVehicle->setSteeringValue(steeringAngle, 0);
     btVehicle->setSteeringValue(steeringAngle, 1);
+
+    inputsMap[clientId] = inputs;
 }
 
 void OpponentManager::addNewOpponent(uint16_t clientId) {
@@ -54,4 +59,23 @@ void OpponentManager::addNewOpponent(uint16_t clientId) {
         config, VehicleModelCache::getDefaultVehicleModel());
 
     vehicleMap.insert({clientId, veh});
+}
+
+void OpponentManager::applyLastInputs(const float dt) {
+    for (const auto &[clientId, vehicle]: vehicleMap) {
+        const auto inputBitmapIterator = inputsMap.find(clientId);
+
+        if (inputBitmapIterator == inputsMap.end())
+            continue;
+
+        const auto inputBitmap = inputBitmapIterator->second;
+
+        const auto forward = (inputBitmap & INPUT_THROTTLE) > 0;
+        const auto backward = (inputBitmap & INPUT_BRAKE) > 0;
+        const auto handbrake = (inputBitmap & INPUT_HANDBRAKE) > 0;
+        const auto left = (inputBitmap & INPUT_LEFT) > 0;
+        const auto right = (inputBitmap & INPUT_RIGHT) > 0;
+
+        vehicle->updateControls(forward, backward, handbrake, left, right, dt);
+    }
 }

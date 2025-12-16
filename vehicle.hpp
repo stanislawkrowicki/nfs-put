@@ -18,6 +18,8 @@ class Vehicle {
 
     float wheelRollingRotation[4] = {0, 0, 0, 0};
 
+    float lastSteering = 0.0f;
+
     bool isBraking = false;
 
     void createBtVehicle();

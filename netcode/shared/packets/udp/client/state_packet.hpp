@@ -6,9 +6,9 @@
 #include "../udp_packet.hpp"
 #include "LinearMath/btTransform.h"
 
-typedef char StateBuffer[80];
+constexpr int STATE_PAYLOAD_SIZE = 81;
 
-constexpr int STATE_PAYLOAD_SIZE = 80;
+typedef char StateBuffer[STATE_PAYLOAD_SIZE];
 
 struct __attribute__((packed)) StatePacket {
     UDPPacketHeader header;

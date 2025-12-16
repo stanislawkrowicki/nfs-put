@@ -22,7 +22,7 @@ add_executable(server
         ../shared/deserialization_error.hpp
         ../shared/packets/udp/udp_packet_type.hpp
         handlers/state_handler.hpp
-        ../shared/packets/udp/server/opponent_positions_packet.hpp
+        ../shared/packets/udp/server/opponent_states_packet.hpp
         ../shared/client_state.hpp
         ../shared/utils/byte_dump.hpp)
 
