@@ -290,7 +290,7 @@ void drawScene(GLFWwindow *window) {
     btVector3 linearVelocity = playerVehicle->getBtVehicle()->getRigidBody()->getLinearVelocity();
     float vehicleSpeed = linearVelocity.length();
 
-    camera.updateCamera(*vehPos, vehYaw, vehicleSpeed);
+    camera.updateCamera(*vehPos);
 
     // view/projection transformations
     const auto aspectRatio = currentWindowWidth / currentWindowHeight;

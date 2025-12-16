@@ -69,7 +69,7 @@ class Camera {
     void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true);
     void ProcessMouseScroll(float yOffset);
 
-    void updateCamera(const glm::vec3 &vehiclePosition,float vehYaw,float vehicleSpeed);
+    void updateCamera(const glm::vec3 &vehiclePosition);
 
     void setNextCameraMode();
 
@@ -78,11 +78,7 @@ class Camera {
     float getZoom() const;
 
   private:
-    float baseFollowDistance = 8.0f;
-    float speedDistanceFactor = 0.05f;
-    float minFollowDistance = 4.0f;
-    float maxFollowDistance = 12.0f;
     void updateCameraVectors();
 
-    void calculateFollowPositions(const glm::vec3 &vehiclePosition, float vehYaw,float vehicleSpeed);
+    void calculateFollowPositions(const glm::vec3 &vehiclePosition);
 };

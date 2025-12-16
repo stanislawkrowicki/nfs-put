@@ -1,6 +1,6 @@
 #include "camera.hpp"
 
-#include <algorithm>
+#include <bits/stl_algo.h>
 #include <glm/gtc/type_ptr.hpp>
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
@@ -57,8 +57,8 @@ void Camera::ProcessMouseScroll(float yOffset) {
     }
 }
 
-void Camera::updateCamera(const glm::vec3 &vehiclePosition, float vehYaw,float vehicleSpeed) {
-    if (Mode == FOLLOW) calculateFollowPositions(vehiclePosition,vehYaw,vehicleSpeed);
+void Camera::updateCamera(const glm::vec3 &vehiclePosition) {
+    if (Mode == FOLLOW) calculateFollowPositions(vehiclePosition);
 }
 
 void Camera::setNextCameraMode() {
@@ -75,24 +75,18 @@ void Camera::updateCameraVectors() {
     Up = glm::normalize(glm::cross(Right, Front));
 }
 
-
-void Camera::calculateFollowPositions(const glm::vec3 &vehiclePosition, float vehYaw, float vehicleSpeed) {
-    Yaw = vehYaw;
-    float dynamicFollowDistance = baseFollowDistance + vehicleSpeed * speedDistanceFactor;
-    dynamicFollowDistance = glm::clamp(dynamicFollowDistance, minFollowDistance, maxFollowDistance);
-
-    const float offsetX = -dynamicFollowDistance * cos(glm::radians(Pitch)) * cos(glm::radians(Yaw));
-    const float offsetY = -dynamicFollowDistance * sin(glm::radians(Pitch))+2.0f;
-    const float offsetZ = -dynamicFollowDistance * cos(glm::radians(Pitch)) * sin(glm::radians(Yaw));
+void Camera::calculateFollowPositions(const glm::vec3 &vehiclePosition) {
+    const float offsetX = -FollowDistance * cos(glm::radians(Pitch)) * cos(glm::radians(Yaw));
+    const float offsetY = -FollowDistance * sin(glm::radians(Pitch));
+    const float offsetZ = -FollowDistance * cos(glm::radians(Pitch)) * sin(glm::radians(Yaw));
 
     Position = vehiclePosition + glm::vec3(offsetX, offsetY, offsetZ);
 
     Front = glm::normalize(vehiclePosition - Position);
+
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
 }
-
-
 
 void Camera::setCameraMode(const Camera_Mode mode) { this->Mode = mode; }
 
