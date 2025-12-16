@@ -26,6 +26,4 @@ private:
     int socketFd;
 
     [[noreturn]] void loop() const;
-
-    void parseBuf(std::unique_ptr<char[]> &buf, ssize_t size) const;
 };
