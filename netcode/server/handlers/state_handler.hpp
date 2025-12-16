@@ -7,7 +7,7 @@
 
 class StateHandler {
 public:
-    static void handle(const StatePacket &packet, const ClientHandle &client) {
+    static void handle(const StatePacket &packet, ClientHandle &client) {
         if (packet.header.id < client.lastReceivedPacketId)
             return;
 
@@ -15,5 +15,7 @@ public:
         std::memcpy(state.state, packet.payload, STATE_PAYLOAD_SIZE);
 
         Loop::enqueueStateUpdate(state);
+
+        client.lastReceivedPacketId++;
     }
 };

@@ -19,7 +19,7 @@ public:
 
     void sendToAllExcept(const PacketBuffer &data, ssize_t size, const ClientHandle &except) const;
 
-    void handlePacket(const PacketBuffer &buf, ssize_t size, const ClientHandle &client) const;
+    void handlePacket(const PacketBuffer &buf, ssize_t size, ClientHandle &client) const;
 
 private:
     int socketFd;

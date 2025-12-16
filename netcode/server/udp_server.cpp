@@ -99,7 +99,7 @@ void UDPServer::loop() const {
     }
 }
 
-void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, const ClientHandle &client) const {
+void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, ClientHandle &client) const {
     const bool isValid = UDPPacket::validate(buf, size);
     if (!isValid) {
         std::cerr << "Received a packet with invalid checksum." << std::endl;
