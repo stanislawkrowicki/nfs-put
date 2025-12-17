@@ -19,7 +19,12 @@ public:
 
     void sendToAllExcept(const PacketBuffer &data, ssize_t size, const ClientHandle &except) const;
 
+    void sendToAllExcept(const PacketBuffer &data, ssize_t size, uint16_t exceptId) const;
+
     void handlePacket(const PacketBuffer &buf, ssize_t size, ClientHandle &client) const;
+
+    [[nodiscard]]
+    std::unordered_map<uint16_t, ClientHandle> &getAllClients() const;
 
 private:
     int socketFd;

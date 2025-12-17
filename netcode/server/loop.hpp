@@ -11,11 +11,11 @@ class Loop {
 
     static std::shared_ptr<UDPServer> server;
 
-    static std::vector<ClientState> statesToUpdate;
+    static std::unordered_map<uint16_t, ClientState> latestClientStates;
 
     static void sendMessageToAll();
 
-    static void sendStates();
+    static void sendLatestStates();
 
     static OpponentStatesPacket packStatesBatch(const std::vector<ClientState> &batch);
 

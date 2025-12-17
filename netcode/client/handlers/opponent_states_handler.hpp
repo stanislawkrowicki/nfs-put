@@ -5,13 +5,10 @@
 
 class OpponentStatesHandler {
 public:
-    static void handle(const PacketBuffer &buf, const ssize_t size, const uint16_t localClientId) {
+    static void handle(const PacketBuffer &buf, const ssize_t size) {
         auto packet = deserializeOpponentState(buf, size);
 
         for (const auto [clientId, state]: packet.states) {
-            /* TODO: See Loop::sendPositions() todo */
-            if (clientId == localClientId) continue;
-
             OpponentManager::getInstance().updateOpponentState(clientId, state);
         }
     }

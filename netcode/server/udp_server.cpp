@@ -69,6 +69,11 @@ void UDPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
     }
 }
 
+void UDPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const uint16_t exceptId) const {
+    const auto client = clientManager->getClient(exceptId);
+    sendToAllExcept(data, size, *client);
+}
+
 [[noreturn]]
 void UDPServer::loop() const {
     while (true) {
@@ -120,4 +125,8 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, Client
     } catch (DeserializationError &e) {
         std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
     }
+}
+
+std::unordered_map<uint16_t, ClientHandle> &UDPServer::getAllClients() const {
+    return clientManager->getAllClients();
 }
