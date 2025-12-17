@@ -77,6 +77,12 @@ OpponentStatesPacket Loop::packStatesBatch(const std::vector<ClientState> &batch
     packet.statesCount = batch.size();
     packet.states = batch;
 
-    // TODO: Add missing checksum
+    const auto serialized = serializeOpponentState(packet);
+
+    const auto packetSize = OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA + sizeof(ClientState) * packet.statesCount;
+
+    const auto checksum = UDPPacket::calculatePacketChecksum(serialized, packetSize);
+
+    packet.checksum = checksum;
     return packet;
 }

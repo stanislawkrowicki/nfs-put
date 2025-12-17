@@ -3,12 +3,17 @@
 #include <vector>
 #include "../../../client_state.hpp"
 
+constexpr ssize_t OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA = sizeof(UDPPacketHeader)
+                                                             + sizeof(uint8_t)
+                                                             + sizeof(uint32_t);
+
 struct OpponentStatesPacket {
     UDPPacketHeader header;
     uint8_t statesCount;
     std::vector<ClientState> states;
     uint32_t checksum;
 };
+
 
 inline size_t getOpponentStatePacketSize(const OpponentStatesPacket &packet) {
     return sizeof(packet.header)
@@ -32,8 +37,7 @@ inline PacketBuffer serializeOpponentState(const OpponentStatesPacket &packet) {
         currentSize += sizeof(state);
     }
 
-    const auto checksum = UDPPacket::calculatePacketChecksum(buf, currentSize + sizeof(packet.checksum));
-    std::memcpy(buf.get() + currentSize, &checksum, sizeof(checksum));
+    std::memcpy(buf.get() + currentSize, &packet.checksum, sizeof(packet.checksum));
 
     return buf;
 }
