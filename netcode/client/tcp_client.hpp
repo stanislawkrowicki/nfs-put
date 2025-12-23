@@ -5,10 +5,15 @@
 #include <sys/epoll.h>
 #include <thread>
 #include <atomic>
-
+#include <condition_variable>
+struct ClientState {
+    std::mutex mtx;
+    std::condition_variable cv;
+    bool ready = false;
+};
 class TCPClient {
 public:
-    TCPClient();
+    explicit TCPClient(std::shared_ptr<ClientState> state);
     ~TCPClient();
 
     void connect(const char* host, const char* port);
@@ -27,4 +32,5 @@ private:
 
     void handleServerMessage() const;
     void handleUserInput() const;
+    std::shared_ptr<ClientState> state;
 };

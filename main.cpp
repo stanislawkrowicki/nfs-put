@@ -30,6 +30,7 @@
 #include "default_vehicle_model.hpp"
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
+#include "netcode/client/tcp_client.hpp"
 
 using namespace std::chrono;
 
@@ -388,12 +389,23 @@ void drawScene(GLFWwindow *window) {
 }
 
 int main() {
+
+    auto state = std::make_shared<ClientState>();
+    auto tcpClient = std::make_shared<TCPClient>(state);
+    std::thread tcpListenThread([tcpClient] {
+        tcpClient->connect("127.0.0.1","1313");
+    });
+    {
+        std::unique_lock<std::mutex> lock(state->mtx);
+        state->cv.wait(lock, [&] { return state->ready; });
+    }
+    const auto client = std::make_shared<UDPClient>();
+
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    const auto client = std::make_shared<UDPClient>();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);

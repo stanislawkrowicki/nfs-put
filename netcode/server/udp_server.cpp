@@ -93,11 +93,11 @@ void UDPServer::loop() const {
         auto client = clientManager->getClient(sender);
 
         if (!client) {
-            client = clientManager->newClient(sender);
-            auto idBuf = std::make_unique<char[]>(2);
-            std::memcpy(idBuf.get(), &client->id, 2);
-            send(*client, idBuf, 2);
-            continue;
+             client = clientManager->newClient(sender,-1);
+             auto idBuf = std::make_unique<char[]>(2);
+             std::memcpy(idBuf.get(), &client->id, 2);
+             send(*client, idBuf, 2);
+             continue;
         }
 
         handlePacket(buf, bytesRead, *client);

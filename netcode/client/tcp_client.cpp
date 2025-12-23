@@ -16,7 +16,9 @@ static int makeNonBlocking(const int fd) {
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-TCPClient::TCPClient() = default;
+TCPClient::TCPClient(std::shared_ptr<ClientState> state) {
+    this->state = std::move(state);
+};
 
 TCPClient::~TCPClient() {
     if (socketFd >= 0) close(socketFd);
@@ -64,18 +66,9 @@ void TCPClient::connect(const char* host, const char* port) {
     localTimeLeft = 0;
     countdownThread = std::thread([this]() {
     while (true) {
-        if (localTimeLeft > 0 && !lastLobbyMessage.empty()) {
-            // move cursor to top-left, clear screen
-            std::cout << "\033[H\033[J";
-
-            // replace the old "Race starts in: XXs" with updated timer
-            std::string updated = std::regex_replace(
-                lastLobbyMessage,
-                std::regex("Race starts in: \\d+s"),
-                "Race starts in: " + std::to_string(localTimeLeft--)
-            );
-
-            std::cout << updated << std::flush;
+        if (localTimeLeft > 0) {
+            // Move cursor to the beginning of the line and overwrite
+            std::cout << "\rRace starts in: " << localTimeLeft-- << "s" << std::flush;
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
@@ -126,16 +119,30 @@ void TCPClient::handleServerMessage() const {
 
     buf[bytes] = '\0';
     std::string msg(buf);
-
+    if (!state->ready && msg.find("RACE BEGINS! - said the TCP server") != std::string::npos) {
+        {
+            std::lock_guard<std::mutex> lock(state->mtx);
+            state->ready = true;
+        }
+        state->cv.notify_all();
+        return;
+    }
     // Parse race time from server message
     std::regex re("Race starts in: (\\d+)s");
     std::smatch match;
     if (std::regex_search(msg, match, re)) {
         int newTime = std::stoi(match[1]);
         localTimeLeft = newTime;
+        lastLobbyMessage.clear();
+        auto pos = msg.find("Race starts in:");
+        if (pos != std::string::npos) {
+            lastLobbyMessage = msg.substr(0, pos);  // everything before countdown
+        }
 
-        // Store the full message to redraw every second
-        lastLobbyMessage = msg;
+        if (!lastLobbyMessage.empty()) {
+            // Print leaderboard/chat above countdown line
+            std::cout << "\n" << lastLobbyMessage << std::flush;
+        }
     } else {
         // Other messages, just print normally
         std::cout << "\n" << msg << std::flush;

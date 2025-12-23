@@ -26,16 +26,47 @@ public:
 
         return &client->second;
     };
+    ClientHandle* getClientByFd(int fd) {
+        for (auto &[id, client] : clients) {
+            if (client.socketFd == fd)
+                return &client;
+        }
+        return nullptr;
+    }
+
+    void removeClient(int fd) {
+        for (auto it = clients.begin(); it != clients.end(); ++it) {
+            if (it->second.socketFd == fd) {
+                clientIdsByAddress.erase(packAddress(it->second.address));
+
+                close(it->second.socketFd);
+
+                clients.erase(it);
+                numberOfConnectedClients--;
+                break;
+            }
+        }
+    }
+    void setNickName(const int fd, const std::string &nickname) {
+        ClientHandle* client = getClientByFd(fd);
+        if (!client) return;
+        client->nick = nickname;
+    }
+
+    int getNumberOfConnectedClients() const {
+        return numberOfConnectedClients;
+    }
 
     std::unordered_map<uint16_t, ClientHandle> &getAllClients() { return clients; };
 
-    ClientHandle *newClient(sockaddr_in addr) {
+    ClientHandle *newClient(sockaddr_in addr, int fd) {
         auto client = ClientHandle();
         client.address = addr;
         client.id = lastClientId;
 
-        // TODO: set sock on connected to lobby
-        client.socketFd = -1;
+        client.socketFd = fd;
+
+        client.connected = true;
 
         client.connected = true;
 
@@ -62,4 +93,5 @@ private:
     std::unordered_map<uint16_t, ClientHandle> clients;
     std::unordered_map<uint64_t, uint16_t> clientIdsByAddress;
     uint16_t lastClientId = 0;
+    int numberOfConnectedClients = 0;
 };

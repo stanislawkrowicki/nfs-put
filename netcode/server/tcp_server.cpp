@@ -9,13 +9,14 @@
 #include <netdb.h>
 #include <algorithm>
 #include <thread>
+#include <condition_variable>
 
 static int makeNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager) {
+TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_ptr<ServerState> state) {
     socketFd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (socketFd < 0)
         throw std::runtime_error(std::string("Failed to create TcpBSDServer socket! ") + std::strerror(errno));
@@ -26,6 +27,7 @@ TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager) {
     makeNonBlocking(socketFd);
     raceStartTime = std::chrono::steady_clock::now();
     this->clientManager = std::move(clientManager);
+    this->state = std::move(state);
 };
 
 TCPServer::~TCPServer() {
@@ -39,7 +41,7 @@ int TCPServer::timeLeft() const {
     return remaining > 0 ? remaining : 0;
 }
 
-void TCPServer::startCountdownDisplay() const {
+void TCPServer::startCountdown() const {
     std::thread([this]() {
         while (true) {
             int remaining = timeLeft();
@@ -47,6 +49,17 @@ void TCPServer::startCountdownDisplay() const {
 
             if (remaining <= 0) {
                 std::cout << "\nRace started!\n";
+                {
+                    std::lock_guard<std::mutex> lock(state->mtx);
+                    state->udpReady = true;
+                }
+                state->cv.notify_all();
+                const auto& clients = clientManager->getAllClients();
+                std::string raceBegin="RACE BEGINS! - said the TCP server";
+                for (const auto& [id, client] : clients) {
+                    if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
+                    send(client, raceBegin.c_str(), raceBegin.size());
+                }
                 break;
             }
 
@@ -69,13 +82,10 @@ void TCPServer::listen(const char *port) {
     if (::listen(socketFd, SOMAXCONN))
         throw std::runtime_error(std::string("TcpBSDServer listen failed: ") + strerror(errno));
     freeaddrinfo(res);
-    startCountdownDisplay();
+    startCountdown();
     loop();
 }
 
-void TCPServer::addMessageListener(const PacketListener listener) {
-    listeners.push_back(listener);
-}
 
 void TCPServer::send(const ClientHandle client, const char *data, const ssize_t size) const {
     if (!client.connected) {
@@ -114,7 +124,7 @@ void TCPServer::loop() const {
                     if (cfd < 0) break;
                     makeNonBlocking(cfd);
                     auto *client =clientManager->newClient(cli,cfd);
-                    client->state = ClientState::WaitingForNick;
+                    client->state = ClientStateLobby::WaitingForNick;
                     const char *message="Welcome to the race! Please provide us with your unique nickname! (max 20 characters)\n";
                     size_t messageLen = strlen(message);
                     send(*client, message, messageLen);
@@ -158,7 +168,7 @@ void TCPServer::loop() const {
 
 void TCPServer::parsePacket(const Packet &packet) const {
     ClientHandle *client = packet.sender;
-    if (client->state == ClientState::WaitingForNick) {
+    if (client->state == ClientStateLobby::WaitingForNick) {
         handleNick(packet);
     } else {
         std::cout<<"not nick data from a client:\n";
@@ -186,7 +196,7 @@ void TCPServer::handleNick(const Packet &packet) const {
         send(*client, message, messageLen);
     } else {
         client->nick = nick;
-        client->state = ClientState::InLobby;
+        client->state = ClientStateLobby::InLobby;
         message="Nick accepted! Welcome to the lobby.\n";
         size_t messageLen = strlen(message);
         send(*client, message, messageLen);
@@ -198,19 +208,19 @@ void TCPServer::broadcastPlayers() const {
     const auto& clients = clientManager->getAllClients();
     size_t connectedCount = 0;
     for (const auto& [id, client] : clients) {
-        if (client.connected && client.state == ClientState::InLobby)
+        if (client.connected && client.state == ClientStateLobby::InLobby)
             ++connectedCount;
     }
     std::string lobbyMessage = "Player Count (" + std::to_string(connectedCount) + "):\n";
 
     int index = 1;
     for (const auto& [id, client] : clients) {
-        if (!client.connected || client.state != ClientState::InLobby) continue;
+        if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
         lobbyMessage += std::to_string(index++) + ". " + client.nick + "\n";
     }
     lobbyMessage += "Race starts in: " + std::to_string(timeLeft()) + "s\n";
     for (const auto& [id, client] : clients) {
-        if (!client.connected || client.state != ClientState::InLobby) continue;
+        if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
         send(client, lobbyMessage.c_str(), lobbyMessage.size());
     }
 }

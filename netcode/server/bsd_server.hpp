@@ -3,9 +3,15 @@
 
 #include "client_handle.hpp"
 #include "client_manager.hpp"
-
+struct Packet {
+    std::unique_ptr<char[]> data;
+    ssize_t size;
+    ClientHandle *sender;
+};
 class BSDServer {
 public:
+    BSDServer() = default;
+
     virtual ~BSDServer() = default;
 
     virtual void listen(const char *port) = 0;
