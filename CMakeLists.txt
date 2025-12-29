@@ -89,7 +89,7 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/client/tcp_client.hpp
         netcode/shared/packets/udp/udp_packet.hpp
         netcode/shared/packets/udp/client/state_packet.hpp
-        netcode/shared/packets/udp/packet_header.hpp
+        netcode/shared/packets/udp/udp_packet_header.hpp
         netcode/shared/crc32.hpp
         netcode/shared/crc32.cpp
         netcode/shared/deserialization_error.hpp
@@ -102,6 +102,17 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/client/opponent_manager.cpp
         netcode/client/opponent_manager.hpp
         netcode/shared/client_inputs.hpp
+        netcode/shared/packets/tcp/tcp_packet_type.hpp
+        netcode/shared/packets/tcp/tcp_packet.hpp
+        netcode/shared/packets/tcp/tcp_packet_header.hpp
+        netcode/shared/packets/tcp/server/race_start_packet.hpp
+        netcode/shared/packets/tcp/server/provide_name_packet.hpp
+        netcode/shared/packets/tcp/client/name_packet.hpp
+        netcode/client/handlers/provide_name_handler.hpp
+        netcode/shared/packets/tcp/server/name_taken_packet.hpp
+        netcode/shared/packets/tcp/server/name_accepted_packet.hpp
+        netcode/client/handlers/name_taken_handler.hpp
+        netcode/client/handlers/name_accepted_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

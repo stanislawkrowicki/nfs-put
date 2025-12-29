@@ -28,7 +28,7 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
     std::memcpy(&transformData, state, sizeof(transformData));
     std::memcpy(&velocityData, state + sizeof(transformData), sizeof(velocityData));
     std::memcpy(&steeringAngle, state + sizeof(transformData) + sizeof(velocityData), sizeof(steeringAngle));
-    std::memcpy(&inputs, state + STATE_PAYLOAD_SIZE - sizeof(inputs), sizeof(inputs));
+    std::memcpy(&inputs, state + RACE_START_PAYLOAD_SIZE - sizeof(inputs), sizeof(inputs));
 
     transform.deSerialize(transformData);
     const auto velocity = btVector3(velocityData[0], velocityData[1], velocityData[2]);

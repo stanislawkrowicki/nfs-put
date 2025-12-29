@@ -18,7 +18,7 @@ add_executable(server
         loop.hpp
         ../shared/packets/udp/udp_packet.hpp
         ../shared/packets/udp/client/state_packet.hpp
-        ../shared/packets/udp/packet_header.hpp
+        ../shared/packets/udp/udp_packet_header.hpp
         ../shared/crc32.hpp
         ../shared/crc32.cpp
         ../shared/deserialization_error.hpp
@@ -26,7 +26,16 @@ add_executable(server
         handlers/state_handler.hpp
         ../shared/packets/udp/server/opponent_states_packet.hpp
         ../shared/client_state.hpp
-        ../shared/utils/byte_dump.hpp)
+        ../shared/utils/byte_dump.hpp
+        ../shared/packets/tcp/tcp_packet_type.hpp
+        ../shared/packets/tcp/tcp_packet.hpp
+        ../shared/packets/tcp/tcp_packet_header.hpp
+        ../shared/packets/tcp/server/race_start_packet.hpp
+        ../shared/packets/tcp/server/provide_name_packet.hpp
+        ../shared/packets/tcp/client/name_packet.hpp
+        handlers/name_handler.hpp
+        ../shared/packets/tcp/server/name_taken_packet.hpp
+        ../shared/packets/tcp/server/name_accepted_packet.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 

@@ -6,6 +6,9 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+
+#include "netcode/shared/packets/tcp/tcp_packet.hpp"
+
 struct ClientState {
     std::mutex mtx;
     std::condition_variable cv;
@@ -17,7 +20,10 @@ public:
     ~TCPClient();
 
     void connect(const char* host, const char* port);
-    void send(const char* data, ssize_t size) const;
+
+    void send(const char *data, size_t size) const;
+
+    void send(const PacketBuffer &buf, size_t size) const;
 
 private:
     int socketFd{-1};
@@ -30,7 +36,11 @@ private:
     [[noreturn]]
     void loop() const;
 
-    void handleServerMessage() const;
+    void receivePacket() const;
+
     void handleUserInput() const;
+
+    void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size) const;
+
     std::shared_ptr<ClientState> state;
 };

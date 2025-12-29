@@ -10,9 +10,14 @@
 #include <algorithm>
 #include <thread>
 #include <condition_variable>
+#include <ranges>
+
+#include "../shared/packets/tcp/server/provide_name_packet.hpp"
+#include "../shared/packets/tcp/server/race_start_packet.hpp"
+#include "handlers/name_handler.hpp"
 
 static int makeNonBlocking(int fd) {
-    int flags = fcntl(fd, F_GETFL, 0);
+    const int flags = fcntl(fd, F_GETFL, 0);
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
@@ -25,7 +30,7 @@ TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_p
     setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
     makeNonBlocking(socketFd);
-    raceStartTime = std::chrono::steady_clock::now();
+    lobbyStartTime = std::chrono::steady_clock::now();
     this->clientManager = std::move(clientManager);
     this->state = std::move(state);
 };
@@ -34,31 +39,33 @@ TCPServer::~TCPServer() {
     if (socketFd >= 0)
         close(socketFd);
 }
-int TCPServer::timeLeft() const {
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - raceStartTime).count();
-    int remaining = raceDuration - static_cast<int>(elapsed);
+
+int TCPServer::timeUntilStart() const {
+    const auto now = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lobbyStartTime).count();
+    const int remaining = raceStartTimeout - static_cast<int>(elapsed);
     return remaining > 0 ? remaining : 0;
 }
 
 void TCPServer::startCountdown() const {
     std::thread([this]() {
         while (true) {
-            int remaining = timeLeft();
+            const int remaining = timeUntilStart();
             std::cout << "\rRace starts in: " << remaining << "s" << std::flush;
 
             if (remaining <= 0) {
-                std::cout << "\nRace started!\n";
-                {
+                std::cout << "\nRace started!\n"; {
                     std::lock_guard<std::mutex> lock(state->mtx);
                     state->udpReady = true;
                 }
                 state->cv.notify_all();
-                const auto& clients = clientManager->getAllClients();
-                std::string raceBegin="RACE BEGINS! - said the TCP server";
-                for (const auto& [id, client] : clients) {
+                const auto &clients = clientManager->getAllClients();
+
+                for (const auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
-                    send(client, raceBegin.c_str(), raceBegin.size());
+                    auto packet = RaceStartPacket();
+                    const auto serialized = TCPPacket::serialize(packet);
+                    send(client, serialized, sizeof(packet));
                 }
                 break;
             }
@@ -87,7 +94,7 @@ void TCPServer::listen(const char *port) {
 }
 
 
-void TCPServer::send(const ClientHandle client, const char *data, const ssize_t size) const {
+void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t size) {
     if (!client.connected) {
         std::cout << "Tried to send to not connected" << std::endl;
         return;
@@ -95,8 +102,86 @@ void TCPServer::send(const ClientHandle client, const char *data, const ssize_t 
 
     const ssize_t bytesSent = ::send(client.socketFd, data, size, 0);
 
-    if (bytesSent <= 0)
-        throw std::runtime_error(std::string("Failed to TCP message: ") + strerror(errno));
+    if (bytesSent <= 0 && errno != EWOULDBLOCK && errno != EAGAIN)
+        throw std::runtime_error(std::string("Failed to send TCP message: ") + strerror(errno));
+
+    /* TODO: Instead of busy waiting like this we should keep a queue for every client
+     * and poll their FDs to see when they're ready */
+    if (bytesSent <= 0 && (errno == EWOULDBLOCK || errno == EAGAIN)) {
+        send(client, data, size);
+        return;
+    }
+
+    if (bytesSent > 0 && bytesSent < size) {
+        const auto remainingBufferPtr = data + bytesSent;
+        const auto remainingSize = size - bytesSent;
+        send(client, remainingBufferPtr, remainingSize);
+    }
+}
+
+void TCPServer::send(const ClientHandle &client, const PacketBuffer &data, const ssize_t size) {
+    send(client, data.get(), size);
+}
+
+void TCPServer::sendToAll(const PacketBuffer &data, const ssize_t size) const {
+    for (const auto &client: clientManager->getAllClients() | std::views::values) {
+        send(client, data, size);
+    }
+}
+
+void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const ClientHandle &except) const {
+    for (const auto &client: clientManager->getAllClients() | std::views::values) {
+        if (client.id != except.id)
+            send(client, data, size);
+    }
+}
+
+void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const uint16_t exceptId) const {
+    const auto client = clientManager->getClient(exceptId);
+    sendToAllExcept(data, size, *client);
+}
+
+void TCPServer::receivePacketFromClient(ClientHandle &client) const {
+    char headerBuf[sizeof(TCPPacketHeader)];
+    const ssize_t headerBytesRead = recv(client.socketFd, headerBuf, sizeof(headerBuf), MSG_WAITALL);
+
+    if (headerBytesRead <= 0)
+        throw std::runtime_error("Error while reading the header of client packet");
+
+    auto header = TCPPacketHeader();
+    std::memcpy(&header, headerBuf, sizeof(TCPPacketHeader));
+
+    if (header.payloadSize > MAX_TCP_PAYLOAD_SIZE) {
+        std::cerr << "Client sent a packet with payload too large! Size: " << header.payloadSize << std::endl;
+        clientManager->removeClient(client.socketFd);
+        return;
+    }
+
+    const auto payloadBuf = std::make_unique<char[]>(header.payloadSize);
+
+    if (header.payloadSize > 0) {
+        const ssize_t payloadBytesRead = recv(client.socketFd, payloadBuf.get(), header.payloadSize, MSG_WAITALL);
+        if (payloadBytesRead <= 0)
+            throw std::runtime_error("Error while reading the payload from client");
+    }
+
+    handlePacket(header.type, std::move(payloadBuf), header.payloadSize, client);
+}
+
+void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, const ssize_t size,
+                             ClientHandle &client) const {
+    try {
+        switch (type) {
+            case TCPPacketType::Name:
+                NameHandler::handle(std::string(payload.get(), size), client, this);
+                break;
+
+            default:
+                std::cerr << "Received a packet with unknown id: " << static_cast<uint8_t>(type) << std::endl;
+        }
+    } catch (DeserializationError &e) {
+        std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
+    }
 }
 
 [[noreturn]]
@@ -108,7 +193,7 @@ void TCPServer::loop() const {
     ev.events = EPOLLIN;
     ev.data.fd = socketFd;
     epoll_ctl(efd, EPOLL_CTL_ADD, socketFd, &ev);
-    std::cout<<"waiting for clients...\n";
+    std::cout << "waiting for clients...\n";
     epoll_event events[64];
     while (true) {
         int n = epoll_wait(efd, events, 64, -1);
@@ -120,108 +205,56 @@ void TCPServer::loop() const {
                 while (true) {
                     sockaddr_in cli{};
                     socklen_t clilen = sizeof(cli);
-                    int cfd = accept(socketFd, reinterpret_cast<sockaddr*>(&cli), &clilen);
+                    int cfd = accept(socketFd, reinterpret_cast<sockaddr *>(&cli), &clilen);
                     if (cfd < 0) break;
                     makeNonBlocking(cfd);
-                    auto *client =clientManager->newClient(cli,cfd);
+                    auto *client = clientManager->newClient(cli, cfd);
                     client->state = ClientStateLobby::WaitingForNick;
-                    const char *message="Welcome to the race! Please provide us with your unique nickname! (max 20 characters)\n";
-                    size_t messageLen = strlen(message);
-                    send(*client, message, messageLen);
+                    auto packet = ProvideNamePacket();
+                    const auto packetBuf = TCPPacket::serialize(packet);
+                    send(*client, packetBuf, sizeof(packet));
+
                     epoll_event cev{};
                     cev.events = EPOLLIN | EPOLLRDHUP;
                     cev.data.fd = cfd;
                     epoll_ctl(efd, EPOLL_CTL_ADD, cfd, &cev);
-                    std::cout<<"Accepted client fd="<<cfd<<"\n";
+                    std::cout << "\nAccepted client fd=" << cfd << "\n";
                 }
                 continue;
             }
             if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 clientManager->removeClient(fd);
-                std::cout<<"Client disconnected fd="<<fd<<"\n";
-                broadcastPlayers();
+                std::cout << "Client disconnected fd=" << fd << "\n";
+                // broadcastPlayers();
                 continue;
             }
             if (events[i].events & EPOLLIN) {
-                char buf[21];
-                ssize_t bytesRead = recv(fd, buf, sizeof(buf), 0);
-                if (bytesRead <= 0) {
-                    clientManager->removeClient(fd);
-                    std::cout<<"Client disconnected fd="<<fd<<"\n";
-                    broadcastPlayers();
-                    continue;
-                }
-                ClientHandle *client = clientManager->getClientByFd(fd);
+                const auto client = clientManager->getClientByFd(fd);
                 if (!client) continue;
-                Packet packet{
-                    .data = std::make_unique<char[]>(bytesRead),
-                    .size = bytesRead,
-                    .sender = client
-                };
-                memcpy(packet.data.get(), buf, bytesRead);
 
-                parsePacket(packet);
+                receivePacketFromClient(*clientManager->getClientByFd(fd));
             }
         }
     }
 }
 
-void TCPServer::parsePacket(const Packet &packet) const {
-    ClientHandle *client = packet.sender;
-    if (client->state == ClientStateLobby::WaitingForNick) {
-        handleNick(packet);
-    } else {
-        std::cout<<"not nick data from a client:\n";
-        write(STDOUT_FILENO, packet.data.get(), packet.size);
-    }
-}
-void TCPServer::handleNick(const Packet &packet) const {
-    ClientHandle *client = packet.sender;
-
-    std::string nick(packet.data.get(), packet.size);
-    nick.erase(std::remove(nick.begin(), nick.end(), '\n'), nick.end());
-    nick.erase(std::remove(nick.begin(), nick.end(), '\r'), nick.end());
-
-    bool taken = false;
-    for (auto &p : clientManager->getAllClients()) {
-        if (p.second.nick == nick && p.second.id != client->id) {
-            taken = true;
-            break;
-        }
-    }
-    const char *message;
-    if (taken) {
-        message = "Nick taken. Choose another one.\n";
-        size_t messageLen = strlen(message);
-        send(*client, message, messageLen);
-    } else {
-        client->nick = nick;
-        client->state = ClientStateLobby::InLobby;
-        message="Nick accepted! Welcome to the lobby.\n";
-        size_t messageLen = strlen(message);
-        send(*client, message, messageLen);
-        std::cout << "Client fd=" << client->socketFd << " set nick: " << nick << "\n";
-        broadcastPlayers();
-    }
-}
 void TCPServer::broadcastPlayers() const {
-    const auto& clients = clientManager->getAllClients();
+    const auto &clients = clientManager->getAllClients();
     size_t connectedCount = 0;
-    for (const auto& [id, client] : clients) {
+    for (const auto &[id, client]: clients) {
         if (client.connected && client.state == ClientStateLobby::InLobby)
             ++connectedCount;
     }
     std::string lobbyMessage = "Player Count (" + std::to_string(connectedCount) + "):\n";
 
     int index = 1;
-    for (const auto& [id, client] : clients) {
+    for (const auto &[id, client]: clients) {
         if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
         lobbyMessage += std::to_string(index++) + ". " + client.nick + "\n";
     }
-    lobbyMessage += "Race starts in: " + std::to_string(timeLeft()) + "s\n";
-    for (const auto& [id, client] : clients) {
+    lobbyMessage += "Race starts in: " + std::to_string(timeUntilStart()) + "s\n";
+    for (const auto &[id, client]: clients) {
         if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
         send(client, lobbyMessage.c_str(), lobbyMessage.size());
     }
 }
-

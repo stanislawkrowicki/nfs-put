@@ -11,7 +11,7 @@
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
-constexpr int MAX_PAYLOAD_SIZE = 81;
+constexpr int MAX_UDP_PAYLOAD_SIZE = 1024;
 
 class UDPPacket {
 public:
@@ -40,8 +40,8 @@ public:
 
     template<typename T>
     static T create(const UDPPacketType type, const uint32_t id, const char *payload, const uint8_t payloadSize) {
-        if (payloadSize > MAX_PAYLOAD_SIZE) {
-            throw std::length_error("Payload size exceeds MAX_PAYLOAD_SIZE");
+        if (payloadSize > MAX_UDP_PAYLOAD_SIZE) {
+            throw std::length_error("Payload size exceeds MAX_UDP_PAYLOAD_SIZE");
         }
 
         T packet{};
