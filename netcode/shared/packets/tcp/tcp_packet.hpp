@@ -41,7 +41,7 @@ public:
     }
 
     template<typename T>
-    static T create(const TCPPacketType type, const uint32_t id, const char *payload, const uint8_t payloadSize) {
+    static T create(const TCPPacketType type, const uint32_t id, const char *payload, const uint16_t payloadSize) {
         if (payloadSize > MAX_TCP_PAYLOAD_SIZE) {
             throw std::length_error("Payload size exceeds MAX_TCP_PAYLOAD_SIZE");
         }
