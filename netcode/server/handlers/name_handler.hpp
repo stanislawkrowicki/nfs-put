@@ -34,17 +34,17 @@ public:
 
             constexpr auto response = NameAcceptedPacket();
             TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
-            std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
-            ClientConnectedPacket connected{};
-            std::memcpy(connected.payload,
-                        client.nick.c_str(),
-                        std::min(client.nick.size(), static_cast<size_t>(CONNNAME_PAYLOAD_SIZE)));
 
-            const auto buf = TCPPacket::serialize(connected);
+            std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
+
+            const auto [clientConnectedPacket, clientConnectedPacketSize] = TCPPacket::create<ClientConnectedPacket>(
+                TCPPacketType::ClientConnected, client.nick.c_str(), client.nick.size());
+
+            const auto buf = TCPPacket::serialize(clientConnectedPacket, clientConnectedPacketSize);
 
             server->sendToAllInLobbyExcept(buf,
-                                    sizeof(ClientConnectedPacket),
-                                    client);
+                                           clientConnectedPacketSize,
+                                           client);
 
             TimeUntilStartPacket countdown{};
             countdown.seconds = server->timeUntilStart();

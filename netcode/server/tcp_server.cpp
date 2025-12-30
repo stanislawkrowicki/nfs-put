@@ -206,17 +206,13 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
     }
 }
 void TCPServer::notifyClientDisconnected(const ClientHandle& client) const {
-    ClientDisconnectedPacket packet{};
-    constexpr int MAX_NICK_SIZE = 32;
-    std::memcpy(packet.payload,
-                client.nick.c_str(),
-                std::min(client.nick.size(), static_cast<size_t>(MAX_NICK_SIZE)));
+    const auto packet = TCPPacket::create<ClientDisconnectedPacket>(TCPPacketType::ClientDisconnected,
+                                                                    client.nick.c_str(), client.nick.size());
+    const auto buf = TCPPacket::serialize(packet);
 
-    auto buf = TCPPacket::serialize(packet);
-
-    sendToAllInLobbyExcept(buf,
-                    sizeof(ClientDisconnectedPacket),
-                    client);
+    sendToAllInLobbyExcept(std::move(buf),
+                           sizeof(ClientDisconnectedPacket),
+                           client);
 }
 
 

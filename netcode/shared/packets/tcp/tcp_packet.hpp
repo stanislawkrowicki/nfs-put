@@ -7,6 +7,7 @@
 #include <format>
 #include <memory>
 
+#include "tcp_packet_header.hpp"
 #include "tcp_packet_type.hpp"
 #include "../../crc32.hpp"
 #include "../../deserialization_error.hpp"
@@ -20,6 +21,11 @@ public:
     template<typename T>
     static PacketBuffer serialize(const T &packet) {
         constexpr auto packetSize = sizeof(T);
+        return serialize(packet, packetSize);
+    }
+
+    template<typename T>
+    static PacketBuffer serialize(const T &packet, const uint16_t packetSize) {
         auto buffer = std::make_unique<char[]>(packetSize);
         std::memcpy(buffer.get(), &packet, packetSize);
         return buffer;
@@ -41,7 +47,7 @@ public:
     }
 
     template<typename T>
-    static T create(const TCPPacketType type, const char *payload, const uint16_t payloadSize) {
+    static std::pair<T, uint16_t> create(const TCPPacketType type, const char *payload, const uint16_t payloadSize) {
         if (payloadSize > MAX_TCP_PAYLOAD_SIZE) {
             throw std::length_error("Payload size exceeds MAX_TCP_PAYLOAD_SIZE");
         }
@@ -53,6 +59,6 @@ public:
 
         std::memcpy(packet.payload, payload, payloadSize);
 
-        return packet;
+        return {packet, sizeof(TCPPacketHeader) + payloadSize};
     }
 };
