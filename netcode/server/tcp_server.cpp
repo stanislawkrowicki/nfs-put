@@ -206,8 +206,8 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
     }
 }
 void TCPServer::notifyClientDisconnected(const ClientHandle& client) const {
-    const auto packet = TCPPacket::create<ClientDisconnectedPacket>(TCPPacketType::ClientDisconnected,
-                                                                    client.nick.c_str(), client.nick.size());
+    const auto packet = TCPPacket::create<ClientDisconnectedPacket>(
+        client.nick.c_str(), client.nick.size());
     const auto buf = TCPPacket::serialize(packet);
 
     sendToAllInLobbyExcept(std::move(buf),

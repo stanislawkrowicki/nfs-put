@@ -38,7 +38,7 @@ public:
             std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
 
             const auto [clientConnectedPacket, clientConnectedPacketSize] = TCPPacket::create<ClientConnectedPacket>(
-                TCPPacketType::ClientConnected, client.nick.c_str(), client.nick.size());
+                client.nick.c_str(), client.nick.size());
 
             const auto buf = TCPPacket::serialize(clientConnectedPacket, clientConnectedPacketSize);
 

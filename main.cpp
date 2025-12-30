@@ -518,7 +518,7 @@ int main() {
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
     std::thread udpListenThread([udpClient] {
-        const auto packet = UDPPacket::create<PingPacket>(UDPPacketType::Ping, 0, nullptr, 0);
+        const auto packet = UDPPacket::create<PingPacket>(0, nullptr, 0);
         udpClient->send(UDPPacket::serialize(packet), sizeof(PingPacket));
         udpClient->listen();
     });

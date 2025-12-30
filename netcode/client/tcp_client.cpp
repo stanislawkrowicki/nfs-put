@@ -202,7 +202,7 @@ void TCPClient::handleUserInput() const {
 
     localNick = nick;
 
-    const auto [packet, packetSize] = TCPPacket::create<NamePacket>(TCPPacketType::Name, nick.c_str(), nick.length());
+    const auto [packet, packetSize] = TCPPacket::create<NamePacket>(nick.c_str(), nick.length());
 
     send(TCPPacket::serialize(packet), packetSize);
 }

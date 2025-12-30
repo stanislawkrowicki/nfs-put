@@ -8,10 +8,14 @@ constexpr ssize_t OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA = sizeof(UDPPacketHea
                                                              + sizeof(uint32_t);
 
 struct OpponentStatesPacket {
-    UDPPacketHeader header;
-    uint8_t statesCount;
-    std::vector<ClientState> states;
-    uint32_t checksum;
+    UDPPacketHeader header{
+        .type = UDPPacketType::PositionResponse,
+        .payloadSize = OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA,
+        .id = 0
+    };
+    uint8_t statesCount{};
+    std::vector<ClientState> states{};
+    uint32_t checksum{};
 };
 
 

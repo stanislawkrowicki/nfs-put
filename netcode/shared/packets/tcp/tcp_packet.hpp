@@ -47,14 +47,13 @@ public:
     }
 
     template<typename T>
-    static std::pair<T, uint16_t> create(const TCPPacketType type, const char *payload, const uint16_t payloadSize) {
+    static std::pair<T, uint16_t> create(const char *payload, const uint16_t payloadSize) {
         if (payloadSize > MAX_TCP_PAYLOAD_SIZE) {
             throw std::length_error("Payload size exceeds MAX_TCP_PAYLOAD_SIZE");
         }
 
         T packet{};
 
-        packet.header.type = type;
         packet.header.payloadSize = payloadSize;
 
         std::memcpy(packet.payload, payload, payloadSize);
