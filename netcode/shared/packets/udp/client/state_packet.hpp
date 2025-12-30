@@ -12,7 +12,7 @@ typedef char StateBuffer[STATE_PAYLOAD_SIZE];
 
 struct __attribute__((packed)) StatePacket {
     UDPPacketHeader header{
-        .type = UDPPacketType::Position,
+        .type = UDPPacketType::State,
         .payloadSize = STATE_PAYLOAD_SIZE,
         .id = 0
     };

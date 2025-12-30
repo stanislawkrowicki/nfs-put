@@ -9,7 +9,7 @@ constexpr ssize_t OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA = sizeof(UDPPacketHea
 
 struct OpponentStatesPacket {
     UDPPacketHeader header{
-        .type = UDPPacketType::PositionResponse,
+        .type = UDPPacketType::OpponentStates,
         .payloadSize = OPPONENT_STATES_PACKET_SIZE_WITHOUT_DATA,
         .id = 0
     };

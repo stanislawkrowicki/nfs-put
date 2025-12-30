@@ -80,7 +80,7 @@ OpponentStatesPacket Loop::packStatesBatch(const std::vector<ClientState> &batch
     OpponentStatesPacket packet;
 
     packet.header = {
-        .type = UDPPacketType::PositionResponse,
+        .type = UDPPacketType::OpponentStates,
         .id = 0,
     };
 

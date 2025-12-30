@@ -112,7 +112,7 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, Client
 
     try {
         switch (type) {
-            case UDPPacketType::Position:
+            case UDPPacketType::State:
                 StateHandler::handle(UDPPacket::deserialize<StatePacket>(buf, size), client);
                 break;
 

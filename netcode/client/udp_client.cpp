@@ -102,7 +102,7 @@ void UDPClient::handlePacket(const PacketBuffer &buf, const ssize_t size) const 
 
     try {
         switch (type) {
-            case UDPPacketType::PositionResponse:
+            case UDPPacketType::OpponentStates:
                 OpponentStatesHandler::handle(buf, size);
                 break;
 
