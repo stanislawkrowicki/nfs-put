@@ -29,7 +29,7 @@ public:
 
             constexpr auto response = NameAcceptedPacket();
             TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
-            std::cout << "\nClient fd=" << client.socketFd << " set nick: " << nickname << "\n";
+            std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
             // server->broadcastPlayers();
         }
     }

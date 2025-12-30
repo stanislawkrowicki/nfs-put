@@ -31,6 +31,8 @@
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/client/tcp_client.hpp"
+#include "netcode/shared/packets/tcp/client/udp_info_packet.hpp"
+#include "netcode/shared/packets/udp/client/ping_packet.hpp"
 
 using namespace std::chrono;
 
@@ -399,7 +401,13 @@ int main() {
         std::unique_lock<std::mutex> lock(state->mtx);
         state->cv.wait(lock, [&] { return state->ready; });
     }
-    const auto client = std::make_shared<UDPClient>();
+    const auto udpClient = std::make_shared<UDPClient>();
+
+    auto udpPort = udpClient->getPort();
+    auto udpInfoPacket = UdpInfoPacket();
+    udpInfoPacket.port = udpPort;
+
+    tcpClient->send(TCPPacket::serialize(udpInfoPacket), sizeof(udpInfoPacket));
 
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -509,8 +517,10 @@ int main() {
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
 
-    std::thread udpListenThread([client] {
-        client->listen();
+    std::thread udpListenThread([udpClient] {
+        const auto packet = UDPPacket::create<PingPacket>(UDPPacketType::Ping, 0, nullptr, 0);
+        udpClient->send(UDPPacket::serialize(packet), sizeof(PingPacket));
+        udpClient->listen();
     });
 
     // const VehicleConfig opponentConfig;
@@ -549,7 +559,7 @@ int main() {
 
             const auto inputBitmap = buildInputBitmap(left, right, handbrake, forward, backward);
 
-            client->sendVehicleState(playerVehicle, inputBitmap);
+            udpClient->sendVehicleState(playerVehicle, inputBitmap);
             lastTick = steady_clock::now();
         }
 

@@ -49,8 +49,8 @@ void UDPServer::send(const ClientHandle client, const PacketBuffer &data, const 
     }
 
     const ssize_t bytesSent = ::sendto(socketFd, data.get(), size, 0,
-                                       reinterpret_cast<const sockaddr *>(&client.address),
-                                       sizeof(client.address));
+                                       reinterpret_cast<const sockaddr *>(&client.udpAddr),
+                                       sizeof(client.udpAddr));
 
     if (bytesSent <= 0)
         throw std::runtime_error(std::string("Failed to UDP message: ") + strerror(errno));
@@ -90,14 +90,10 @@ void UDPServer::loop() const {
             continue;
         }
 
-        auto client = clientManager->getClient(sender);
+        const auto client = clientManager->getClient(sender);
 
         if (!client) {
-             client = clientManager->newClient(sender,-1);
-             auto idBuf = std::make_unique<char[]>(2);
-             std::memcpy(idBuf.get(), &client->id, 2);
-             send(*client, idBuf, 2);
-             continue;
+            continue;
         }
 
         handlePacket(buf, bytesRead, *client);
@@ -118,6 +114,11 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, Client
         switch (type) {
             case UDPPacketType::Position:
                 StateHandler::handle(UDPPacket::deserialize<StatePacket>(buf, size), client);
+                break;
+
+            case UDPPacketType::Ping:
+                // This packet is only used to open the firewall on the client's side to let us
+                // send them UDP data later, ignore
                 break;
             default:
                 std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;

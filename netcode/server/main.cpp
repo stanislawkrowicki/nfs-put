@@ -17,8 +17,16 @@ int main(const int argc, char *argv[]) {
     }
 
     const auto clientManager = std::make_shared<ClientManager>();
+    const auto udpServer = std::make_shared<UDPServer>(clientManager);
+
     auto state = std::make_shared<ServerState>();
     const auto tcpServer = std::make_shared<TCPServer>(clientManager, state);
+
+    std::thread udpServerThread([&] {
+        udpServer->listen(argv[1]);
+    });
+
+    udpServerThread.detach();
 
     std::thread tcpServerThread([&] {
         tcpServer->listen(argv[1]);
@@ -27,17 +35,11 @@ int main(const int argc, char *argv[]) {
         std::unique_lock<std::mutex> lock(state->mtx);
         state->cv.wait(lock, [&] { return state->udpReady; });
     }
-    const auto udpServer = std::make_shared<UDPServer>(clientManager);
-
-    std::thread udpServerThread([&] {
-        udpServer->listen(argv[1]);
-    });
 
     std::thread gameLoopThread([&] {
         Loop::run(udpServer);
     });
 
-    udpServerThread.join();
     gameLoopThread.join();
 
     return 0;

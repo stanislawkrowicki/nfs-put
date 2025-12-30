@@ -4,5 +4,6 @@
 
 enum class UDPPacketType : uint8_t {
     Position,
-    PositionResponse
+    PositionResponse,
+    Ping,
 };

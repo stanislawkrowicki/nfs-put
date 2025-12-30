@@ -15,6 +15,7 @@
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/race_start_packet.hpp"
 #include "handlers/name_handler.hpp"
+#include "handlers/udp_info_handler.hpp"
 
 static int makeNonBlocking(int fd) {
     const int flags = fcntl(fd, F_GETFL, 0);
@@ -100,7 +101,7 @@ void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t
         return;
     }
 
-    const ssize_t bytesSent = ::send(client.socketFd, data, size, 0);
+    const ssize_t bytesSent = ::send(client.tcpSocketFd, data, size, 0);
 
     if (bytesSent <= 0 && errno != EWOULDBLOCK && errno != EAGAIN)
         throw std::runtime_error(std::string("Failed to send TCP message: ") + strerror(errno));
@@ -141,9 +142,9 @@ void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
     sendToAllExcept(data, size, *client);
 }
 
-void TCPServer::receivePacketFromClient(ClientHandle &client) const {
+void TCPServer::receivePacketFromClient(ClientHandle &client) {
     char headerBuf[sizeof(TCPPacketHeader)];
-    const ssize_t headerBytesRead = recv(client.socketFd, headerBuf, sizeof(headerBuf), MSG_WAITALL);
+    const ssize_t headerBytesRead = recv(client.tcpSocketFd, headerBuf, sizeof(headerBuf), MSG_WAITALL);
 
     if (headerBytesRead <= 0)
         throw std::runtime_error("Error while reading the header of client packet");
@@ -153,14 +154,14 @@ void TCPServer::receivePacketFromClient(ClientHandle &client) const {
 
     if (header.payloadSize > MAX_TCP_PAYLOAD_SIZE) {
         std::cerr << "Client sent a packet with payload too large! Size: " << header.payloadSize << std::endl;
-        clientManager->removeClient(client.socketFd);
+        clientManager->removeClient(client.tcpSocketFd);
         return;
     }
 
     const auto payloadBuf = std::make_unique<char[]>(header.payloadSize);
 
     if (header.payloadSize > 0) {
-        const ssize_t payloadBytesRead = recv(client.socketFd, payloadBuf.get(), header.payloadSize, MSG_WAITALL);
+        const ssize_t payloadBytesRead = recv(client.tcpSocketFd, payloadBuf.get(), header.payloadSize, MSG_WAITALL);
         if (payloadBytesRead <= 0)
             throw std::runtime_error("Error while reading the payload from client");
     }
@@ -169,11 +170,15 @@ void TCPServer::receivePacketFromClient(ClientHandle &client) const {
 }
 
 void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, const ssize_t size,
-                             ClientHandle &client) const {
+                             ClientHandle &client) {
     try {
         switch (type) {
             case TCPPacketType::Name:
                 NameHandler::handle(std::string(payload.get(), size), client, this);
+                break;
+
+            case TCPPacketType::UdpInfo:
+                UdpInfoHandler::handle(std::move(payload), client, clientManager);
                 break;
 
             default:
@@ -185,7 +190,7 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
 }
 
 [[noreturn]]
-void TCPServer::loop() const {
+void TCPServer::loop() {
     int efd = epoll_create1(0);
     if (efd < 0)
         throw std::runtime_error(std::string("epoll_create1 failed: ") + strerror(errno));

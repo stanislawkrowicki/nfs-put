@@ -30,8 +30,8 @@ void ConnectionManager::accept() {
     }
 
     ClientHandle client{};
-    client.socketFd = clientFd;
-    client.address = clientAddr;
+    client.tcpSocketFd = clientFd;
+    client.udpAddr = clientAddr;
     client.id = lastClientId;
 
     clients[client.id] = client;

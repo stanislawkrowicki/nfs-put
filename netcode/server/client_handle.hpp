@@ -7,8 +7,8 @@ enum class ClientStateLobby {
     InLobby
 };
 struct ClientHandle {
-    int socketFd;
-    sockaddr_in address;
+    int tcpSocketFd;
+    mutable sockaddr_in udpAddr;
     uint16_t id;
     bool connected;
     int lastReceivedPacketId;

@@ -28,18 +28,24 @@ public:
     };
     ClientHandle* getClientByFd(int fd) {
         for (auto &[id, client] : clients) {
-            if (client.socketFd == fd)
+            if (client.tcpSocketFd == fd)
                 return &client;
         }
         return nullptr;
     }
 
+    void updateClientUdpAddr(ClientHandle &client, const sockaddr_in udpAddr) {
+        clientIdsByAddress.erase(packAddress(client.udpAddr));
+        client.udpAddr = udpAddr;
+        clientIdsByAddress.emplace(packAddress(client.udpAddr), client.id);
+    }
+
     void removeClient(int fd) {
         for (auto it = clients.begin(); it != clients.end(); ++it) {
-            if (it->second.socketFd == fd) {
-                clientIdsByAddress.erase(packAddress(it->second.address));
+            if (it->second.tcpSocketFd == fd) {
+                clientIdsByAddress.erase(packAddress(it->second.udpAddr));
 
-                close(it->second.socketFd);
+                close(it->second.tcpSocketFd);
 
                 clients.erase(it);
                 numberOfConnectedClients--;
@@ -61,17 +67,17 @@ public:
 
     ClientHandle *newClient(sockaddr_in addr, int fd) {
         auto client = ClientHandle();
-        client.address = addr;
+        client.udpAddr = addr;
         client.id = lastClientId;
 
-        client.socketFd = fd;
+        client.tcpSocketFd = fd;
 
         client.connected = true;
 
         client.connected = true;
 
         clients.emplace(lastClientId, client);
-        clientIdsByAddress.emplace(packAddress(client.address), lastClientId);
+        clientIdsByAddress.emplace(packAddress(client.udpAddr), lastClientId);
 
         lastClientId++;
 

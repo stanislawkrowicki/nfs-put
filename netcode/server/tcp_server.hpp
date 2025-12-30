@@ -39,9 +39,9 @@ public:
 
     void sendToAllExcept(const PacketBuffer &data, ssize_t size, uint16_t exceptId) const;
 
-    void receivePacketFromClient(ClientHandle &client) const;
+    void receivePacketFromClient(ClientHandle &client);
 
-    void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size, ClientHandle &client) const;
+    void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size, ClientHandle &client);
 
     [[nodiscard]]
     int timeUntilStart() const;
@@ -53,7 +53,7 @@ private:
     const int raceStartTimeout{15};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
-    [[noreturn]] void loop() const;
+    [[noreturn]] void loop();
 
     void broadcastPlayers() const;
 };

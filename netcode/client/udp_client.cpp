@@ -8,6 +8,7 @@
 #include "../shared/packets/udp/client/state_packet.hpp"
 #include "handlers/opponent_states_handler.hpp"
 #include "netcode/shared/client_inputs.hpp"
+#include "netcode/shared/packets/udp/client/ping_packet.hpp"
 
 UDPClient::UDPClient() {
     addrinfo hints{};
@@ -55,11 +56,6 @@ void UDPClient::send(const char *data, const ssize_t size) const {
 
 void UDPClient::send(const PacketBuffer &data, const ssize_t size) const {
     write(socketFd, data.get(), size);
-}
-
-void UDPClient::sendStartMessage() const {
-    constexpr char message[] = "1";
-    send(message, 1);
 }
 
 void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle, ClientInputs inputs) {
@@ -119,20 +115,6 @@ void UDPClient::handlePacket(const PacketBuffer &buf, const ssize_t size) const 
 }
 
 void UDPClient::listen() {
-    sendStartMessage();
-
-    char idBuf[2];
-
-    const ssize_t responseBytes = ::read(socketFd, idBuf, 2);
-    if (responseBytes <= 0) {
-        std::cerr << "Failed to get user id response: " << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    std::memcpy(&clientId, idBuf, 2);
-
-    std::cout << "Client ID: " << clientId << std::endl;
-
     waitForMessages = true;
 
     while (waitForMessages) {
@@ -155,6 +137,15 @@ void UDPClient::stopListening() {
 void UDPClient::close() {
     ::close(socketFd);
     socketFd = -1;
+}
+
+uint16_t UDPClient::getPort() const {
+    sockaddr_in addr{};
+    socklen_t size = sizeof(addr);
+
+    getsockname(socketFd, reinterpret_cast<sockaddr *>(&addr), &size);
+
+    return ntohs(addr.sin_port);
 }
 
 

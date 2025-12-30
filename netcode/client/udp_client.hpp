@@ -12,7 +12,6 @@ class UDPClient {
 
     int socketFd = -1;
     long lastPacketId = 0;
-    uint16_t clientId{};
     volatile bool waitForMessages = false;
 
 public:
@@ -24,8 +23,6 @@ public:
 
     void send(const PacketBuffer &data, ssize_t size) const;
 
-    void sendStartMessage() const;
-
     void sendVehicleState(const std::shared_ptr<Vehicle> &vehicle, ClientInputs inputs);
 
     void handlePacket(const PacketBuffer &buf, ssize_t size) const;
@@ -35,4 +32,7 @@ public:
     void stopListening();
 
     void close();
+
+    [[nodiscard]]
+    uint16_t getPort() const;
 };
