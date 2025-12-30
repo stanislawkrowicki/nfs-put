@@ -4,6 +4,7 @@
 
 #include "../client_handle.hpp"
 #include "../tcp_server.hpp"
+#include "../../shared/packets/tcp/client/name_packet.hpp"
 #include "../../shared/packets/tcp/server/name_accepted_packet.hpp"
 #include "../../shared/packets/tcp/server/name_taken_packet.hpp"
 #include "../../shared/packets/tcp/server/client_connected_packet.hpp"
@@ -14,6 +15,7 @@ class NameHandler {
 public:
     static void handle(const std::string &nickname, ClientHandle &client, const TCPServer *server) {
         if (client.state != ClientStateLobby::WaitingForNick) return;
+        if (nickname.size() > MAX_NAME_PAYLOAD_SIZE) return;
 
         bool taken = false;
         for (auto &val: server->clientManager->getAllClients() | std::views::values) {

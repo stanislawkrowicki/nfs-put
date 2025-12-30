@@ -202,8 +202,7 @@ void TCPClient::handleUserInput() const {
 
     localNick = nick;
 
-    auto packet = NamePacket();
-    std::memcpy(&packet.payload, nick.c_str(), nick.length());
+    const auto packet = TCPPacket::create<NamePacket>(TCPPacketType::Name, nick.c_str(), nick.length());
 
     send(TCPPacket::serialize(packet), sizeof(packet.header) + nick.length());
 }

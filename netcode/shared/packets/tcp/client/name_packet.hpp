@@ -1,12 +1,12 @@
 #pragma once
-#include "netcode/shared/packets/tcp/tcp_packet_header.hpp"
+#include "../tcp_packet_header.hpp"
 
-constexpr int NAME_PAYLOAD_SIZE = 32;
+constexpr int MAX_NAME_PAYLOAD_SIZE = 32;
 
 struct __attribute__((packed)) NamePacket {
     TCPPacketHeader header{
         .type = TCPPacketType::Name,
-        .payloadSize = NAME_PAYLOAD_SIZE
+        .payloadSize = MAX_NAME_PAYLOAD_SIZE
     };
-    char payload[NAME_PAYLOAD_SIZE]{};
+    char payload[MAX_NAME_PAYLOAD_SIZE]{};
 };
