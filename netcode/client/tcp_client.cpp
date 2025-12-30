@@ -193,20 +193,19 @@ void TCPClient::handleUserInput() const {
     char buf[32];
     const ssize_t bytes = read(STDIN_FILENO, buf, sizeof(buf));
 
+    if (bytes <= 0) return;
+
     std::string nick(buf, strnlen(buf, bytes));
 
-    // Strip newline and carriage return characters
-    nick.erase(std::remove(nick.begin(), nick.end(), '\n'), nick.end());
-    nick.erase(std::remove(nick.begin(), nick.end(), '\r'), nick.end());
+    std::erase(nick, '\n');
+    std::erase(nick, '\r');
 
     localNick = nick;
 
     auto packet = NamePacket();
-    std::memcpy(&packet.payload, buf, 32);
+    std::memcpy(&packet.payload, nick.c_str(), nick.length());
 
-    if (bytes > 0) {
-        send(TCPPacket::serialize(packet), sizeof(packet.header) + bytes);
-    }
+    send(TCPPacket::serialize(packet), sizeof(packet.header) + nick.length());
 }
 
 
