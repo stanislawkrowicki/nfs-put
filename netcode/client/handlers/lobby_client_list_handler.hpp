@@ -8,19 +8,27 @@
 class LobbyClientListHandler {
 public:
     static void handle(const char* payload, size_t size, const TCPClient* client) {
-        std::lock_guard<std::mutex> lock(client->lobbyMtx);
+    std::lock_guard<std::mutex> lock(client->lobbyMtx);
+    //client->lobbyNicks.clear();
 
-        //client->lobbyNicks.clear();
+    size_t offset = 0;
 
-        size_t offset = 0;
-        while (offset < size) {
-            const char* nick = payload + offset;
-            size_t len = std::strlen(nick);
+    while (offset < size) {
+        size_t remaining = size - offset;
 
-            if (len == 0) break;
+        // find '\0' within bounds
+        const char* end = static_cast<const char*>(
+            memchr(payload + offset, '\0', remaining)
+        );
 
-            client->lobbyNicks.emplace_back(nick);
-            offset += len + 1;
-        }
+        if (!end) break; // malformed packet
+
+        size_t len = end - (payload + offset);
+        if (len == 0) break;
+
+        client->lobbyNicks.emplace_back(payload + offset, len);
+        offset += len + 1;
     }
+}
+
 };

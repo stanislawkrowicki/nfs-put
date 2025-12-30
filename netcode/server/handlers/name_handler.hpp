@@ -53,13 +53,26 @@ public:
                 if (c.state == ClientStateLobby::InLobby)
                     nicks.push_back(c.nick);
             }
+            std::sort(nicks.begin(), nicks.end());
+            if (server->clientManager->getNumberOfConnectedClients()!=0) {
+                LobbyClientListPacket lobbyList(nicks, client.nick);
 
-            LobbyClientListPacket lobbyList(nicks, client.nick);
-            auto listBuf = TCPPacket::serialize(lobbyList);
-            TCPServer::send(client, listBuf, sizeof(TCPPacketHeader) + lobbyList.header.payloadSize);
+                size_t totalSize = sizeof(TCPPacketHeader) + lobbyList.header.payloadSize;
+                auto listBuf = std::make_unique<char[]>(totalSize);
+
+                std::memcpy(listBuf.get(), &lobbyList.header, sizeof(TCPPacketHeader));
+                std::memcpy(listBuf.get() + sizeof(TCPPacketHeader), lobbyList.payload.get(), lobbyList.header.payloadSize);
+
+                TCPServer::send(client, listBuf.get(), totalSize);
+                if (server->clientManager->getNumberOfConnectedClients()==2) {
+                    printf("%s", listBuf.get());
+                }
+            }
+
 
 
             std::cout << "\nClient fd=" << client.socketFd << " set nick: " << nickname << "\n";
+            server->clientManager->numberOfConnectedClients++;
             // server->broadcastPlayers();
 
         }

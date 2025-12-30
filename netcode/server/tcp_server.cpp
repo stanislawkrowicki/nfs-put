@@ -224,7 +224,7 @@ void TCPServer::loop() const {
     ev.events = EPOLLIN;
     ev.data.fd = socketFd;
     epoll_ctl(efd, EPOLL_CTL_ADD, socketFd, &ev);
-    std::cout << "waiting for clientsaaaaaaaaaa...\n";
+    std::cout << "waiting for clients...\n";
     epoll_event events[64];
     while (true) {
         int n = epoll_wait(efd, events, 64, -1);
