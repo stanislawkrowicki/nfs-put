@@ -14,10 +14,11 @@
 
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/race_start_packet.hpp"
+#include "../shared/packets/tcp/server/client_disconnected_packet.hpp"
 #include "handlers/name_handler.hpp"
 #include "handlers/udp_info_handler.hpp"
 
-static int makeNonBlocking(int fd) {
+static int makeNonBlocking(const int fd) {
     const int flags = fcntl(fd, F_GETFL, 0);
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
@@ -136,7 +137,23 @@ void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
             send(client, data, size);
     }
 }
+void TCPServer::sendToAllInLobby(const PacketBuffer &buf, ssize_t size) const {
+    for (auto &pair : clientManager->getAllClients()) {
+        const auto &client = pair.second;
+        if (client.state == ClientStateLobby::InLobby) {
+            send(client, buf.get(), size);
+        }
+    }
+}
 
+void TCPServer::sendToAllInLobbyExcept(const PacketBuffer &buf, ssize_t size, const ClientHandle &exclude) const {
+    for (auto &pair : clientManager->getAllClients()) {
+        const auto &client = pair.second;
+        if (client.state == ClientStateLobby::InLobby && client.id != exclude.id) {
+            send(client, buf.get(), size);
+        }
+    }
+}
 void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const uint16_t exceptId) const {
     const auto client = clientManager->getClient(exceptId);
     sendToAllExcept(data, size, *client);
@@ -188,6 +205,20 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
         std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
     }
 }
+void TCPServer::notifyClientDisconnected(const ClientHandle& client) const {
+    ClientDisconnectedPacket packet{};
+    constexpr int NICK_SIZE = 32;
+    std::memcpy(packet.payload,
+                client.nick.c_str(),
+                std::min(client.nick.size(), static_cast<size_t>(NICK_SIZE)));
+
+    auto buf = TCPPacket::serialize(packet);
+
+    sendToAllInLobbyExcept(buf,
+                    sizeof(ClientDisconnectedPacket),
+                    client);
+}
+
 
 [[noreturn]]
 void TCPServer::loop() {
@@ -210,7 +241,7 @@ void TCPServer::loop() {
                 while (true) {
                     sockaddr_in cli{};
                     socklen_t clilen = sizeof(cli);
-                    int cfd = accept(socketFd, reinterpret_cast<sockaddr *>(&cli), &clilen);
+                    const int cfd = accept(socketFd, reinterpret_cast<sockaddr *>(&cli), &clilen);
                     if (cfd < 0) break;
                     makeNonBlocking(cfd);
                     auto *client = clientManager->newClient(cli, cfd);
@@ -228,9 +259,17 @@ void TCPServer::loop() {
                 continue;
             }
             if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+                auto client = clientManager->getClientByFd(fd);
+
+                if (client && client->state == ClientStateLobby::InLobby) {
+                    notifyClientDisconnected(*client);
+                }
                 clientManager->removeClient(fd);
-                std::cout << "Client disconnected fd=" << fd << "\n";
-                // broadcastPlayers();
+
+                TimeUntilStartPacket countdown{};
+                countdown.seconds = timeUntilStart();
+                auto countdownBuf = TCPPacket::serialize(countdown);
+                sendToAllInLobby(countdownBuf, sizeof(countdown));
                 continue;
             }
             if (events[i].events & EPOLLIN) {

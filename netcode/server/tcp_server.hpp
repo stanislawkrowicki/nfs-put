@@ -39,9 +39,15 @@ public:
 
     void sendToAllExcept(const PacketBuffer &data, ssize_t size, uint16_t exceptId) const;
 
+    void sendToAllInLobby(const PacketBuffer &buf, ssize_t size) const;
+
+    void sendToAllInLobbyExcept(const PacketBuffer &data, ssize_t size, const ClientHandle &except) const;
+
     void receivePacketFromClient(ClientHandle &client);
 
     void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size, ClientHandle &client);
+
+    void notifyClientDisconnected(const ClientHandle &client) const;
 
     [[nodiscard]]
     int timeUntilStart() const;
@@ -50,7 +56,7 @@ public:
 private:
     int socketFd;
 
-    const int raceStartTimeout{15};
+    const int raceStartTimeout{100};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     [[noreturn]] void loop();

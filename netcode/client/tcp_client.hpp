@@ -18,20 +18,27 @@ class TCPClient {
 public:
     explicit TCPClient(std::shared_ptr<ClientState> state);
     ~TCPClient();
+    void refreshScreen() const;
+    void displayLobby() const;
 
     void connect(const char* host, const char* port);
 
     void send(const char *data, size_t size) const;
 
     void send(const PacketBuffer &buf, size_t size) const;
+    mutable std::vector<std::string> lobbyNicks;
+    mutable std::mutex lobbyMtx;
+    mutable std::string localNick;
+    mutable std::atomic<int> localTimeLeft{0};
+
 
 private:
     int socketFd{-1};
     int epollFd{-1};
 
-    mutable std::atomic<int> localTimeLeft{0};   // local countdown in seconds
     mutable std::thread countdownThread;         // background countdown thread
     mutable std::string lastLobbyMessage; // latest lobby + countdown from server
+
 
     [[noreturn]]
     void loop() const;

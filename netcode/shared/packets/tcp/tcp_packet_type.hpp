@@ -9,5 +9,8 @@ enum class TCPPacketType : uint8_t {
     NameAccepted,
     TimeUntilStart,
     UdpInfo,
-    RaceStart
+    RaceStart,
+    ClientConnected,
+    ClientDisconnected,
+    LobbyClientList
 };

@@ -6,6 +6,7 @@
 
 class ClientManager {
 public:
+    int numberOfConnectedClients = 0;
     ClientHandle *getClient(const uint16_t id) {
         const auto client = clients.find(id);
         if (client == clients.end()) return nullptr;
@@ -99,5 +100,5 @@ private:
     std::unordered_map<uint16_t, ClientHandle> clients;
     std::unordered_map<uint64_t, uint16_t> clientIdsByAddress;
     uint16_t lastClientId = 0;
-    int numberOfConnectedClients = 0;
+
 };
