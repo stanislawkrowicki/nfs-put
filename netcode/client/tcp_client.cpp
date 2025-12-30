@@ -1,5 +1,9 @@
 #include "tcp_client.hpp"
 
+#include "handlers/client_connected_handler.hpp"
+#include "handlers/client_disconnected_handler.hpp"
+#include "handlers/lobby_client_list_handler.hpp"
+
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -14,6 +18,7 @@
 #include "handlers/name_accepted_handler.hpp"
 #include "handlers/name_taken_handler.hpp"
 #include "handlers/provide_name_handler.hpp"
+#include "handlers/time_until_start_handler.hpp"
 #include "netcode/server/client_handle.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet_header.hpp"
@@ -32,6 +37,36 @@ TCPClient::~TCPClient() {
     if (socketFd >= 0) close(socketFd);
     if (epollFd >= 0) close(epollFd);
 }
+void TCPClient::refreshScreen() const {
+    std::lock_guard<std::mutex> lock(lobbyMtx);
+
+    // Full clear + move cursor to top-left
+    std::cout << "\033[2J\033[H";
+
+    // Countdown line (single newline)
+    std::cout << "Race starts in: " << localTimeLeft.load() << "s\n";
+
+    // Lobby header
+    std::cout << "--- Lobby ---\n";
+
+    int maxPlayers = 4;
+    for (int i = 0; i < maxPlayers; ++i) {
+        if (i < static_cast<int>(lobbyNicks.size())) {
+            std::cout << i + 1 << ". " << lobbyNicks[i] << "\n";
+        } else {
+            std::cout << i + 1 << ". \n";  // empty line to overwrite leftover
+        }
+    }
+
+    std::cout << "--------------\n";
+    std::cout << std::flush;
+}
+
+
+
+
+
+
 
 void TCPClient::connect(const char* host, const char* port) {
     addrinfo hints{}, *res;
@@ -74,13 +109,16 @@ void TCPClient::connect(const char* host, const char* port) {
     localTimeLeft = 0;
     countdownThread = std::thread([this]() {
     while (true) {
-        if (localTimeLeft > 0) {
-            // Move cursor to the beginning of the line and overwrite
-            std::cout << "\rRace starts in: " << localTimeLeft-- << "s" << std::flush;
+        int time = localTimeLeft.load();
+        if (time >= 0) {
+            refreshScreen();
+            localTimeLeft = time - 1;
+
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 });
+
     countdownThread.detach();
 
     loop();
@@ -148,43 +186,20 @@ void TCPClient::receivePacket() const {
 
     handlePacket(header.type, std::move(payloadBuf), header.payloadSize);
     return;
-
-    headerBuf[headerBytesRead] = '\0';
-    std::string msg(headerBuf);
-    if (!state->ready && msg.find("RACE BEGINS! - said the TCP server") != std::string::npos) {
-        {
-            std::lock_guard<std::mutex> lock(state->mtx);
-            state->ready = true;
-        }
-        state->cv.notify_all();
-        return;
-    }
-    // Parse race time from server message
-    std::regex re("Race starts in: (\\d+)s");
-    std::smatch match;
-    if (std::regex_search(msg, match, re)) {
-        int newTime = std::stoi(match[1]);
-        localTimeLeft = newTime;
-        lastLobbyMessage.clear();
-        auto pos = msg.find("Race starts in:");
-        if (pos != std::string::npos) {
-            lastLobbyMessage = msg.substr(0, pos);  // everything before countdown
-        }
-
-        if (!lastLobbyMessage.empty()) {
-            // Print leaderboard/chat above countdown line
-            std::cout << "\n" << lastLobbyMessage << std::flush;
-        }
-    } else {
-        // Other messages, just print normally
-        std::cout << "\n" << msg << std::flush;
-    }
 }
 
 
 void TCPClient::handleUserInput() const {
     char buf[32];
     const ssize_t bytes = read(STDIN_FILENO, buf, sizeof(buf));
+
+    std::string nick(buf, strnlen(buf, bytes));
+
+    // Strip newline and carriage return characters
+    nick.erase(std::remove(nick.begin(), nick.end(), '\n'), nick.end());
+    nick.erase(std::remove(nick.begin(), nick.end(), '\r'), nick.end());
+
+    localNick = nick;
 
     auto packet = NamePacket();
     std::memcpy(&packet.payload, buf, 32);
@@ -194,6 +209,8 @@ void TCPClient::handleUserInput() const {
     }
 }
 
+
+
 void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &payload, const ssize_t size) const {
     try {
         switch (type) {
@@ -201,13 +218,22 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
                 ProvideNameHandler::handle();
                 break;
             case TCPPacketType::NameAccepted:
-                NameAcceptedHandler::handle();
+                NameAcceptedHandler::handle(this);
                 break;
             case TCPPacketType::NameTaken:
                 NameTakenHandler::handle();
                 break;
+            case TCPPacketType::ClientConnected:
+                ClientConnectedHandler::handle(payload.get(), size, this);
+                break;
+            case TCPPacketType::ClientDisconnected:
+                ClientDisconnectedHandler::handle(payload.get(), size, this);
+                break;
             case TCPPacketType::TimeUntilStart:
-                std::cout << "Received time until start" << std::endl;
+                TimeUntilStartHandler::handle(payload.get(), size, this);
+                break;
+            case TCPPacketType::LobbyClientList:
+                LobbyClientListHandler::handle(payload.get(), size, this);
                 break;
             case TCPPacketType::RaceStart: {
                 std::lock_guard<std::mutex> lock(state->mtx);

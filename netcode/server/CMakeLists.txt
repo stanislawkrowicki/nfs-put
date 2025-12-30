@@ -35,7 +35,11 @@ add_executable(server
         ../shared/packets/tcp/client/name_packet.hpp
         handlers/name_handler.hpp
         ../shared/packets/tcp/server/name_taken_packet.hpp
-        ../shared/packets/tcp/server/name_accepted_packet.hpp)
+        ../shared/packets/tcp/server/name_accepted_packet.hpp
+        ../shared/packets/tcp/server/client_connected_packet.hpp
+        ../shared/packets/tcp/server/client_disconnected_packet.hpp
+        ../shared/packets/tcp/server/time_until_start_packet.hpp
+        ../shared/packets/tcp/server/lobby_client_list_packet.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 
