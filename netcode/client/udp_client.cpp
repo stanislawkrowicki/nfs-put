@@ -84,7 +84,7 @@ void UDPClient::sendVehicleState(const std::shared_ptr<Vehicle> &vehicle, Client
     std::memcpy(buf + transformSize + velocitySize, &steeringAngle, steeringAngleSize);
     std::memcpy(buf + sizeof(buf) - sizeof(inputs), &inputs, sizeof(inputs));
 
-    const auto packet = UDPPacket::create<StatePacket>(lastPacketId, buf, RACE_START_PAYLOAD_SIZE);
+    const auto packet = UDPPacket::create<StatePacket>(lastPacketId, buf, STATE_PAYLOAD_SIZE);
 
     send(UDPPacket::serialize(packet), sizeof(packet));
     lastPacketId++;

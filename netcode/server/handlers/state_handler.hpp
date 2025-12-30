@@ -12,7 +12,7 @@ public:
             return;
 
         ClientState state{client.id};
-        std::memcpy(state.state, packet.payload, RACE_START_PAYLOAD_SIZE);
+        std::memcpy(state.state, packet.payload, STATE_PAYLOAD_SIZE);
 
         Loop::enqueueStateUpdate(state);
 

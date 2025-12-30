@@ -5,5 +5,5 @@
 
 struct __attribute__((packed)) ClientState {
     uint16_t clientId;
-    char state[RACE_START_PAYLOAD_SIZE];
+    char state[STATE_PAYLOAD_SIZE];
 };
