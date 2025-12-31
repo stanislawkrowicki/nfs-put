@@ -38,6 +38,8 @@ TCPClient::~TCPClient() {
     if (epollFd >= 0) close(epollFd);
 }
 void TCPClient::refreshScreen() const {
+    if (!inLobby.load())
+        return;
     std::lock_guard<std::mutex> lock(lobbyMtx);
 
     // Full clear + move cursor to top-left
@@ -137,7 +139,7 @@ void TCPClient::send(const PacketBuffer &buf, const size_t size) const {
 }
 
 [[noreturn]]
-void TCPClient::loop() const {
+void TCPClient::loop(){
     epoll_event events[2];
 
     while (true) {
@@ -161,7 +163,7 @@ void TCPClient::loop() const {
     }
 }
 
-void TCPClient::receivePacket() const {
+void TCPClient::receivePacket(){
     char headerBuf[sizeof(TCPPacketHeader)];
     const ssize_t headerBytesRead = recv(socketFd, headerBuf, sizeof(headerBuf), MSG_WAITALL);
 
@@ -209,7 +211,7 @@ void TCPClient::handleUserInput() const {
 
 
 
-void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &payload, const ssize_t size) const {
+void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &payload, const ssize_t size){
     try {
         switch (type) {
             case TCPPacketType::ProvideName:

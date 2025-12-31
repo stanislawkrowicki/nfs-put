@@ -10,6 +10,7 @@ struct ClientHandle {
     int tcpSocketFd;
     mutable sockaddr_in udpAddr;
     uint16_t id;
+
     bool connected;
     int lastReceivedPacketId;
     std::string nick;

@@ -4,6 +4,9 @@
 
 #include "client_handle.hpp"
 
+#include <ranges>
+#include <bits/stl_vector.h>
+
 class ClientManager {
 public:
     int numberOfConnectedClients = 0;
@@ -12,7 +15,15 @@ public:
         if (client == clients.end()) return nullptr;
 
         return &client->second;
-    };
+    }
+
+    bool nameTaken(const std::string & nickname, const uint16_t client_id) {
+        for (auto &val: getAllClients() | std::views::values) {
+            if (val.nick == nickname && val.id != client_id)
+                return true;
+        }
+        return false;
+    }
 
     ClientHandle *getClient(const sockaddr_in &address) {
         const auto clientAddress = clientIdsByAddress.find(packAddress(address));
@@ -26,7 +37,17 @@ public:
         }
 
         return &client->second;
-    };
+    }
+
+    std::vector<std::string> getNicksInLobby() {
+        std::vector<std::string> nicks;
+        for (const auto &[id, c] : getAllClients()) {
+            if (c.state == ClientStateLobby::InLobby)
+                nicks.push_back(c.nick);
+        }
+        return nicks;
+    }
+
     ClientHandle* getClientByFd(int fd) {
         for (auto &[id, client] : clients) {
             if (client.tcpSocketFd == fd)
@@ -64,7 +85,13 @@ public:
         return numberOfConnectedClients;
     }
 
-    std::unordered_map<uint16_t, ClientHandle> &getAllClients() { return clients; };
+    std::unordered_map<uint16_t, ClientHandle> &getAllClients() { return clients; }
+
+    void ToLobby(const std::string &nickname, ClientHandle & client) {
+        client.nick = nickname;
+        client.state = ClientStateLobby::InLobby;
+        numberOfConnectedClients++;
+    }
 
     ClientHandle *newClient(sockaddr_in addr, int fd) {
         auto client = ClientHandle();

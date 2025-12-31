@@ -30,6 +30,7 @@ public:
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
     mutable std::atomic<int> localTimeLeft{0};
+    mutable std::atomic<bool> inLobby{false};
 
 
 private:
@@ -41,13 +42,13 @@ private:
 
 
     [[noreturn]]
-    void loop() const;
+    void loop();
 
-    void receivePacket() const;
+    void receivePacket();
 
     void handleUserInput() const;
 
-    void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size) const;
+    void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size);
 
     std::shared_ptr<ClientState> state;
 };

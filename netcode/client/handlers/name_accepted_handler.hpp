@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <atomic>
 
 class NameAcceptedHandler {
 public:
@@ -11,5 +12,6 @@ public:
         }
 
         std::cout << "\nYour nickname '" << client->localNick << "' was accepted.\n";
+        client->inLobby.store(true);
     }
 };

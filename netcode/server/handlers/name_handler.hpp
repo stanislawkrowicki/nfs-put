@@ -17,66 +17,64 @@ public:
         if (client.state != ClientStateLobby::WaitingForNick) return;
         if (nickname.size() > MAX_NAME_PAYLOAD_SIZE) return;
 
-        bool taken = false;
-        for (auto &val: server->clientManager->getAllClients() | std::views::values) {
-            if (val.nick == nickname && val.id != client.id) {
-                taken = true;
-                break;
-            }
+        if (server->clientManager->nameTaken(nickname,client.id)) {
+            sendNameTaken(client);
+            return;
         }
 
-        if (taken) {
-            constexpr auto response = NameTakenPacket();
-            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
-        } else {
-            client.nick = nickname;
-            client.state = ClientStateLobby::InLobby;
+        sendNameAcceptedPacket(nickname,client,server);
 
-            constexpr auto response = NameAcceptedPacket();
-            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+        std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
 
-            std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
+        sendClientConnectedPacket(client, server);
+        sendTimeUntilStartPacket(server);
+        sendClientList(client,server);
+    }
 
-            const auto [clientConnectedPacket, clientConnectedPacketSize] = TCPPacket::create<ClientConnectedPacket>(
-                client.nick.c_str(), client.nick.size());
+    static void sendNameTaken(const ClientHandle & client) {
+        constexpr auto response = NameTakenPacket();
+        TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+    }
 
-            const auto buf = TCPPacket::serialize(clientConnectedPacket, clientConnectedPacketSize);
+    static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, const TCPServer *server) {
+        server->clientManager->ToLobby(nickname, client);
 
-            server->sendToAllInLobbyExcept(buf,
-                                           clientConnectedPacketSize,
-                                           client);
+        constexpr auto response = NameAcceptedPacket();
+        TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+    }
 
-            TimeUntilStartPacket countdown{};
-            countdown.seconds = server->timeUntilStart();
-            auto countdownBuf = TCPPacket::serialize(countdown);
+    static void sendClientConnectedPacket(const ClientHandle &client, const TCPServer *server) {
+        const auto [clientConnectedPacket, clientConnectedPacketSize] = TCPPacket::create<ClientConnectedPacket>(
+       client.nick.c_str(), client.nick.size());
 
-            server->sendToAllInLobby(countdownBuf, sizeof(countdown));
+        const auto buf = TCPPacket::serialize(clientConnectedPacket, clientConnectedPacketSize);
 
-            std::vector<std::string> nicks;
-            for (const auto &[id, c] : server->clientManager->getAllClients()) {
-                if (c.state == ClientStateLobby::InLobby)
-                    nicks.push_back(c.nick);
-            }
+        server->sendToAllInLobbyExcept(buf,
+                                       clientConnectedPacketSize,
+                                       client);
+    }
 
-            std::sort(nicks.begin(), nicks.end());
+    static void sendTimeUntilStartPacket(const TCPServer *server) {
+        TimeUntilStartPacket countdown{};
+        countdown.seconds = server->timeUntilStart();
+        auto countdownBuf = TCPPacket::serialize(countdown);
 
-            if (server->clientManager->getNumberOfConnectedClients()!=0) {
-                LobbyClientListPacket lobbyList(nicks, client.nick);
+        server->sendToAllInLobby(countdownBuf, sizeof(countdown));
+    }
 
-                size_t totalSize = sizeof(TCPPacketHeader) + lobbyList.header.payloadSize;
-                auto listBuf = std::make_unique<char[]>(totalSize);
+    static void sendClientList(const ClientHandle &client, const TCPServer *server) {
+        std::vector<std::string> nicks = server->clientManager->getNicksInLobby();
 
-                std::memcpy(listBuf.get(), &lobbyList.header, sizeof(TCPPacketHeader));
-                std::memcpy(listBuf.get() + sizeof(TCPPacketHeader), lobbyList.payload.get(), lobbyList.header.payloadSize);
+        if (server->clientManager->getNumberOfConnectedClients()!=1) {
+            LobbyClientListPacket lobbyList(nicks, client.nick);
 
-                TCPServer::send(client, listBuf.get(), totalSize);
-                if (server->clientManager->getNumberOfConnectedClients()==2) {
-                    printf("%s", listBuf.get());
-                }
-            }
+            size_t totalSize = sizeof(TCPPacketHeader) + lobbyList.header.payloadSize;
+            auto listBuf = std::make_unique<char[]>(totalSize);
 
-            std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
-            server->clientManager->numberOfConnectedClients++;
+            std::memcpy(listBuf.get(), &lobbyList.header, sizeof(TCPPacketHeader));
+            std::memcpy(listBuf.get() + sizeof(TCPPacketHeader), lobbyList.payload.get(), lobbyList.header.payloadSize);
+
+            TCPServer::send(client, listBuf.get(), totalSize);
         }
     }
 };
