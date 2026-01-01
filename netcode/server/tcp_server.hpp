@@ -49,6 +49,8 @@ public:
 
     void notifyClientDisconnected(const ClientHandle &client) const;
 
+    void sendClientOpponentsInfo(const ClientHandle &client) const;
+
     [[nodiscard]]
     int timeUntilStart() const;
 

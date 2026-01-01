@@ -14,7 +14,7 @@
 
 typedef std::unique_ptr<char[]> PacketBuffer;
 
-constexpr int MAX_TCP_PAYLOAD_SIZE = 255;
+constexpr int MAX_TCP_PAYLOAD_SIZE = 1024;
 
 class TCPPacket {
 public:

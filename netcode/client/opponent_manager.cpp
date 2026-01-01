@@ -3,7 +3,27 @@
 #include "default_vehicle_model.hpp"
 #include "vehicle_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
+#include "netcode/shared/opponent_info.hpp"
 #include "netcode/shared/packets/udp/client/state_packet.hpp"
+
+void OpponentManager::enqueueVehicleCreationForOpponent(uint16_t opponentId, const VehicleConfig &config) {
+    if (!openglReady)
+        vehiclesToCreate.emplace_back(opponentId, config);
+    else
+        createOpponentVehicle(opponentId, config);
+}
+
+void OpponentManager::createOpponentVehicle(uint16_t opponentId, const VehicleConfig &config) {
+    if (vehicleMap.contains(opponentId)) {
+        std::cerr << "Tried to create an opponent vehicle for a client with existing vehicle" << std::endl;
+        return;
+    }
+
+    auto veh = VehicleManager::getInstance().createVehicle(
+        config, VehicleModelCache::getDefaultVehicleModel());
+
+    vehicleMap.insert({opponentId, veh});
+}
 
 OpponentManager &OpponentManager::getInstance() {
     static OpponentManager instance;
@@ -14,7 +34,6 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
     const auto vehicle = vehicleMap.find(clientId);
 
     if (vehicle == vehicleMap.end()) {
-        addNewOpponent(clientId);
         return;
     }
 
@@ -50,15 +69,14 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
     inputsMap[clientId] = inputs;
 }
 
-void OpponentManager::addNewOpponent(uint16_t clientId) {
+void OpponentManager::addNewOpponent(const uint16_t &opponentId, const PlayerVehicleColor &vehicleColor) {
     const VehicleConfig config;
 
     config.isPlayerVehicle = false;
-    config.bodyColor = glm::vec4(0.3f, 1.0f, 0.4f, 1.0f);
-    auto veh = VehicleManager::getInstance().createVehicle(
-        config, VehicleModelCache::getDefaultVehicleModel());
+    config.bodyColor = glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(),
+                                 1.0f);
 
-    vehicleMap.insert({clientId, veh});
+    enqueueVehicleCreationForOpponent(opponentId, config);
 }
 
 void OpponentManager::applyLastInputs(const float dt) {
@@ -78,4 +96,13 @@ void OpponentManager::applyLastInputs(const float dt) {
 
         vehicle->updateControls(forward, backward, handbrake, left, right, dt);
     }
+}
+
+void OpponentManager::setOpenGLReady() {
+    openglReady = true;
+
+    for (const auto &[opponentId, vehicleConfig]: vehiclesToCreate)
+        createOpponentVehicle(opponentId, vehicleConfig);
+
+    vehiclesToCreate.clear();
 }

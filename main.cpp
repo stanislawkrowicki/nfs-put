@@ -544,6 +544,7 @@ int main() {
     // opponent = new Opponent(opponentVehicle);
 
     auto &opponentManager = OpponentManager::getInstance();
+    opponentManager.setOpenGLReady();
 
     auto lastTick = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {

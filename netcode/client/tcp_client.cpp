@@ -17,6 +17,7 @@
 
 #include "handlers/name_accepted_handler.hpp"
 #include "handlers/name_taken_handler.hpp"
+#include "handlers/opponents_info_handler.hpp"
 #include "handlers/provide_name_handler.hpp"
 #include "handlers/time_until_start_handler.hpp"
 #include "netcode/server/client_handle.hpp"
@@ -241,7 +242,10 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
             }
                 state->cv.notify_all();
                 break;
-
+            case TCPPacketType::OpponentsInfo: {
+                OpponentsInfoHandler::handle(payload, size);
+                break;
+            }
             default:
                 std::cerr << "Received packet with unknown type: " << static_cast<uint8_t>(type) << std::endl;
         }

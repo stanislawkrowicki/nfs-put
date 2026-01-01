@@ -12,9 +12,11 @@
 #include <condition_variable>
 #include <ranges>
 
+#include "../shared/opponent_info.hpp"
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/race_start_packet.hpp"
 #include "../shared/packets/tcp/server/client_disconnected_packet.hpp"
+#include "../shared/packets/tcp/server/opponents_info_packet.hpp"
 #include "handlers/name_handler.hpp"
 #include "handlers/udp_info_handler.hpp"
 
@@ -68,6 +70,7 @@ void TCPServer::startCountdown() const {
                     auto packet = RaceStartPacket();
                     const auto serialized = TCPPacket::serialize(packet);
                     send(client, serialized, sizeof(packet));
+                    sendClientOpponentsInfo(client);
                 }
                 break;
             }
@@ -215,6 +218,26 @@ void TCPServer::notifyClientDisconnected(const ClientHandle& client) const {
                            client);
 }
 
+void TCPServer::sendClientOpponentsInfo(const ClientHandle &client) const {
+    std::vector<OpponentInfo> opponentInfos;
+
+    for (const auto &opponent: clientManager->getAllClients() | std::views::values) {
+        if (opponent.id == client.id) continue;
+        if (opponent.state != ClientStateLobby::InLobby) continue;
+
+        OpponentInfo info{
+            .id = opponent.id,
+            .vehicleColor = PlayerVehicleColor(255, 0, 100),
+            .nickname = opponent.nick
+        };
+
+        opponentInfos.push_back(info);
+    }
+
+    const auto packet = OpponentsInfoPacket(opponentInfos);
+    const auto packetSize = static_cast<ssize_t>(sizeof(packet.header) + packet.header.payloadSize);
+    send(client, TCPPacket::serialize(packet), packetSize);
+}
 
 [[noreturn]]
 void TCPServer::loop() {
