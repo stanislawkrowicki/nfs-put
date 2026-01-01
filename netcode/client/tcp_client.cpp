@@ -236,7 +236,7 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
             case TCPPacketType::LobbyClientList:
                 LobbyClientListHandler::handle(payload.get(), size, this);
                 break;
-            case TCPPacketType::RaceStart: {
+            case TCPPacketType::StartGame: {
                 std::lock_guard<std::mutex> lock(state->mtx);
                 state->ready = true;
             }
