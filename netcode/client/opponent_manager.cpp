@@ -1,6 +1,7 @@
 #include "opponent_manager.hpp"
 
 #include "default_vehicle_model.hpp"
+#include "netcode/shared/starting_positions.hpp"
 #include "vehicle_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/shared/opponent_info.hpp"
@@ -69,12 +70,17 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
     inputsMap[clientId] = inputs;
 }
 
-void OpponentManager::addNewOpponent(const uint16_t &opponentId, const PlayerVehicleColor &vehicleColor) {
+void OpponentManager::addNewOpponent(const uint16_t &opponentId, const uint8_t gridPositionIndex,
+                                     const PlayerVehicleColor &vehicleColor) {
     const VehicleConfig config;
+
+    const auto gridPosition = startingPositions[gridPositionIndex % std::size(startingPositions)];
 
     config.isPlayerVehicle = false;
     config.bodyColor = glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(),
                                  1.0f);
+    config.position = gridPosition.getOrigin();
+    config.rotation = gridPosition.getRotation();
 
     enqueueVehicleCreationForOpponent(opponentId, config);
 }

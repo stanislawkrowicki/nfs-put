@@ -72,4 +72,6 @@ public:
     void aiUpdateControls(bool forward, bool backward, float steering);
 
     float applyRotationToWheel(size_t wheelIndex, float deltaRotation);
+
+    void printDebugPosition() const;
 };

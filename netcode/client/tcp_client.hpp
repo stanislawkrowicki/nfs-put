@@ -26,6 +26,13 @@ public:
     void send(const char *data, size_t size) const;
 
     void send(const PacketBuffer &buf, size_t size) const;
+
+    void setGameReady();
+
+    uint8_t getGridPosition() const;
+
+    void setGridPosition(uint8_t gridPos);
+
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
@@ -40,6 +47,7 @@ private:
     mutable std::thread countdownThread;         // background countdown thread
     mutable std::string lastLobbyMessage; // latest lobby + countdown from server
 
+    uint8_t gridPosition;
 
     [[noreturn]]
     void loop();

@@ -16,5 +16,6 @@ struct __attribute__((packed)) PlayerVehicleColor {
 struct OpponentInfo {
     uint16_t id;
     PlayerVehicleColor vehicleColor;
+    uint8_t gridPosition;
     std::string nickname;
 };

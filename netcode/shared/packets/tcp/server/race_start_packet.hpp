@@ -1,10 +1,11 @@
 #pragma once
 
-constexpr int RACE_START_PAYLOAD_SIZE = 0;
+constexpr int START_GAME_PAYLOAD_SIZE = 1;
 
-struct __attribute__((packed)) RaceStartPacket {
+struct __attribute__((packed)) StartGamePacket {
     TCPPacketHeader header{
         .type = TCPPacketType::StartGame,
-        .payloadSize = RACE_START_PAYLOAD_SIZE
+        .payloadSize = START_GAME_PAYLOAD_SIZE
     };
+    uint8_t gridPosition{};
 };

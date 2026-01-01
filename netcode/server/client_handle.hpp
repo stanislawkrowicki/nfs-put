@@ -15,4 +15,6 @@ struct ClientHandle {
     int lastReceivedPacketId;
     std::string nick;
     ClientStateLobby state = ClientStateLobby::WaitingForNick;
+
+    uint8_t gridPosition;
 };

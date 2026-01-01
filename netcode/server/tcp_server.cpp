@@ -67,7 +67,8 @@ void TCPServer::startCountdown() const {
 
                 for (const auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
-                    auto packet = RaceStartPacket();
+                    auto packet = StartGamePacket();
+                    packet.gridPosition = client.gridPosition;
                     const auto serialized = TCPPacket::serialize(packet);
                     send(client, serialized, sizeof(packet));
                     sendClientOpponentsInfo(client);
@@ -228,6 +229,7 @@ void TCPServer::sendClientOpponentsInfo(const ClientHandle &client) const {
         OpponentInfo info{
             .id = opponent.id,
             .vehicleColor = PlayerVehicleColor(255, 0, 100),
+            .gridPosition = opponent.gridPosition,
             .nickname = opponent.nick
         };
 

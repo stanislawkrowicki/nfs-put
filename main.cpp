@@ -28,6 +28,7 @@
 #include <thread>
 
 #include "default_vehicle_model.hpp"
+#include "netcode/shared/starting_positions.hpp"
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/client/tcp_client.hpp"
@@ -104,6 +105,7 @@ void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, 
     if (key == GLFW_KEY_X && action == GLFW_PRESS) pathGenerator->addWaypointFromVehicle(playerVehicle);
     if (key == GLFW_KEY_F10 && action == GLFW_PRESS)
         pathGenerator->saveWaypointsToFile("paths.json");
+    if (key == GLFW_KEY_F7 && action == GLFW_PRESS) playerVehicle->printDebugPosition();
 }
 
 void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &vehicle, const float deltaTime) {
@@ -510,8 +512,13 @@ int main() {
     auto &physics = Physics::getInstance();
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
     physics.initPhysics(triMesh);
+
     const VehicleConfig defaultConfig;
-    defaultConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);
+    const auto gridPositionIndex = tcpClient->getGridPosition();
+    const auto gridPosition = startingPositions[gridPositionIndex % std::size(startingPositions)];
+
+    defaultConfig.position = gridPosition.getOrigin();
+    defaultConfig.rotation = gridPosition.getRotation();
 
     const auto vehicleModel = VehicleModelCache::getDefaultVehicleModel();
 

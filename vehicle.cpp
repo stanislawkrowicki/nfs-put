@@ -230,3 +230,12 @@ void Vehicle::aiUpdateControls(const bool forward, const bool backward, const fl
 float Vehicle::applyRotationToWheel(const size_t wheelIndex, const float deltaRotation) {
     return wheelRollingRotation[wheelIndex] += deltaRotation;
 }
+
+void Vehicle::printDebugPosition() const {
+    const auto transform = this->btVehicle->getChassisWorldTransform();
+    const auto pos = transform.getOrigin();
+    const auto rot = transform.getRotation();
+
+    std::cout << pos.getX() << " " << pos.getY() << " " << pos.getZ() << " | " << rot.getX() << " " << rot.getY() << " "
+            << rot.getZ() << " " << rot.getW() << std::endl;
+}

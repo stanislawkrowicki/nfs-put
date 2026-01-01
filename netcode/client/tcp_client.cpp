@@ -19,6 +19,7 @@
 #include "handlers/name_taken_handler.hpp"
 #include "handlers/opponents_info_handler.hpp"
 #include "handlers/provide_name_handler.hpp"
+#include "handlers/start_game_handler.hpp"
 #include "handlers/time_until_start_handler.hpp"
 #include "netcode/server/client_handle.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
@@ -139,6 +140,21 @@ void TCPClient::send(const PacketBuffer &buf, const size_t size) const {
     send(buf.get(), size);
 }
 
+void TCPClient::setGameReady() { {
+        std::lock_guard<std::mutex> lock(state->mtx);
+        state->ready = true;
+    }
+    state->cv.notify_all();
+}
+
+uint8_t TCPClient::getGridPosition() const {
+    return gridPosition;
+}
+
+void TCPClient::setGridPosition(const uint8_t gridPos) {
+    this->gridPosition = gridPos;
+}
+
 [[noreturn]]
 void TCPClient::loop(){
     epoll_event events[2];
@@ -236,11 +252,8 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
             case TCPPacketType::LobbyClientList:
                 LobbyClientListHandler::handle(payload.get(), size, this);
                 break;
-            case TCPPacketType::StartGame: {
-                std::lock_guard<std::mutex> lock(state->mtx);
-                state->ready = true;
-            }
-                state->cv.notify_all();
+            case TCPPacketType::StartGame:
+                StartGameHandler::handle(payload, size, this);
                 break;
             case TCPPacketType::OpponentsInfo: {
                 OpponentsInfoHandler::handle(payload, size);

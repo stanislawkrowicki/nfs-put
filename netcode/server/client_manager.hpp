@@ -104,6 +104,8 @@ public:
 
         client.connected = true;
 
+        client.gridPosition = lastClientId;
+
         clients.emplace(lastClientId, client);
         clientIdsByAddress.emplace(packAddress(client.udpAddr), lastClientId);
 

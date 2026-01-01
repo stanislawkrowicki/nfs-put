@@ -16,18 +16,21 @@ struct __attribute__((packed)) OpponentsInfoPacket {
         .type = TCPPacketType::OpponentsInfo,
         .payloadSize = 0
     };
-    /* Structure: id(2), vehicleColor(3), nicknameLength(1), nickname(nicknameLength) */
+    /* Structure: id(2), vehicleColor(3), gridPosition(1), nicknameLength(1), nickname(nicknameLength) */
     char payload[MAX_OPPONENTS_INFO_PAYLOAD_SIZE]{};
 
     explicit OpponentsInfoPacket(const std::vector<OpponentInfo> &opponentsInfo) {
         size_t offset = 0;
 
-        for (const auto &[id, vehicleColor, nickname]: opponentsInfo) {
+        for (const auto &[id, vehicleColor, gridPosition, nickname]: opponentsInfo) {
             std::memcpy(payload + offset, &id, sizeof(id));
             offset += sizeof(id);
 
             std::memcpy(payload + offset, &vehicleColor, sizeof(vehicleColor));
             offset += sizeof(vehicleColor);
+
+            payload[offset] = static_cast<char>(gridPosition);
+            offset++;
 
             const auto nicknameLength = static_cast<uint8_t>(nickname.length());
             std::memcpy(payload + offset, &nicknameLength, 1);
@@ -59,6 +62,10 @@ struct __attribute__((packed)) OpponentsInfoPacket {
             if (offset + sizeof(info.vehicleColor) > size) throwOpponentInfoSizeMismatch(offset, size);
             std::memcpy(&info.vehicleColor, dataPtr + offset, sizeof(info.vehicleColor));
             offset += sizeof(info.vehicleColor);
+
+            if (offset + 1 > size) throwOpponentInfoSizeMismatch(offset, size);
+            info.gridPosition = static_cast<uint8_t>(dataPtr[offset]);
+            offset += 1;
 
             if (offset + 1 > size) throwOpponentInfoSizeMismatch(offset, size);
             const auto nameLen = static_cast<uint8_t>(dataPtr[offset]);

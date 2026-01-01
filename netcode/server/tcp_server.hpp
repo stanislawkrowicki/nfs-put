@@ -58,7 +58,7 @@ public:
 private:
     int socketFd;
 
-    const int raceStartTimeout{100};
+    const int raceStartTimeout{15};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     [[noreturn]] void loop();

@@ -32,7 +32,7 @@ public:
 
     void updateOpponentState(uint16_t clientId, const char *state);
 
-    void addNewOpponent(const uint16_t &opponentId, const PlayerVehicleColor &vehicleColor);
+    void addNewOpponent(const uint16_t &opponentId, uint8_t gridPositionIndex, const PlayerVehicleColor &vehicleColor);
 
     void applyLastInputs(float dt);
 
