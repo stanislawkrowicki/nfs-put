@@ -71,7 +71,7 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
 }
 
 void OpponentManager::addNewOpponent(const uint16_t &opponentId, const uint8_t gridPositionIndex,
-                                     const PlayerVehicleColor &vehicleColor) {
+                                     const PlayerVehicleColor &vehicleColor, const std::string &nickname) {
     const VehicleConfig config;
 
     const auto gridPosition = startingPositions[gridPositionIndex % std::size(startingPositions)];
@@ -81,6 +81,7 @@ void OpponentManager::addNewOpponent(const uint16_t &opponentId, const uint8_t g
                                  1.0f);
     config.position = gridPosition.getOrigin();
     config.rotation = gridPosition.getRotation();
+    config.name = nickname;
 
     enqueueVehicleCreationForOpponent(opponentId, config);
 }

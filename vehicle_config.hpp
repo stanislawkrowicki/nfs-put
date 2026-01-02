@@ -12,6 +12,7 @@ struct WheelPlacement {
 struct VehicleConfig {
     /* General */
     mutable std::string name = "Vehicle";
+    mutable std::string nickname;
     mutable bool isPlayerVehicle = true;
 
     mutable glm::vec4 bodyColor = glm::vec4(0.0f, 0.273f, 0.773f, 1.0f);

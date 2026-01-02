@@ -22,7 +22,7 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
     auto nextTick = steady_clock::now();
 
     while (true) {
-        state->endMatch();
+        //state->endMatch();
         {
             std::lock_guard lock(state->mtx);
             if (state->phase == MatchPhase::Finished)

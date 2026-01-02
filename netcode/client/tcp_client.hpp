@@ -19,6 +19,7 @@ public:
     explicit TCPClient(std::shared_ptr<ClientState> state);
     ~TCPClient();
     void refreshScreen() const;
+    std::string getPlayerNickname() const;
     void displayLobby() const;
 
     void connect(const char* host, const char* port);

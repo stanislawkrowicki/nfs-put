@@ -67,10 +67,9 @@ void TCPClient::refreshScreen() const {
     std::cout << std::flush;
 }
 
-
-
-
-
+std::string TCPClient::getPlayerNickname() const {
+    return localNick;
+}
 
 
 void TCPClient::connect(const char* host, const char* port) {

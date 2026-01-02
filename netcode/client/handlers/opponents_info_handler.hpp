@@ -10,7 +10,7 @@ public:
         const auto opponentInfos = OpponentsInfoPacket::deserialize(payload, size);
 
         for (const auto &info: opponentInfos) {
-            OpponentManager::getInstance().addNewOpponent(info.id, info.gridPosition, info.vehicleColor);
+            OpponentManager::getInstance().addNewOpponent(info.id, info.gridPosition, info.vehicleColor, info.nickname);
         }
     }
 };
