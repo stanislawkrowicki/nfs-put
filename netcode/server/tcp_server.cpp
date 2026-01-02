@@ -99,8 +99,12 @@ void TCPServer::countdownToLobbyEnd() const {
                     packet.gridPosition = client.gridPosition;
                     const auto serialized = TCPPacket::serialize(packet);
                     send(client, serialized, sizeof(packet));
+                }
+
+                for (auto &client: clients | std::views::values) {
                     sendClientOpponentsInfo(client);
                 }
+
                 break;
             }
 
@@ -271,7 +275,7 @@ void TCPServer::sendClientOpponentsInfo(const ClientHandle &client) const {
 
     for (const auto &opponent: clientManager->getAllClients() | std::views::values) {
         if (opponent.id == client.id) continue;
-        if (opponent.state != ClientStateLobby::InLobby) continue;
+        if (opponent.state != ClientStateLobby::InGame) continue;
 
         OpponentInfo info{
             .id = opponent.id,
