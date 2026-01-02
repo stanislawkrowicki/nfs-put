@@ -39,8 +39,11 @@ public:
     static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, TCPServer *server) {
         server->clientManager->ToLobby(nickname, client);
         if (server->clientManager->getNumberOfConnectedClients() == 1) {
-            server->resetLobbyStartTime();
-            server->countdownToLobbyEnd();
+            std::lock_guard lock(server->state->mtx);
+            if (server->state->phase == MatchPhase::Lobby) {
+                server->resetLobbyStartTime();
+                server->countdownToLobbyEnd();
+            }
         }
 
         constexpr auto response = NameAcceptedPacket();

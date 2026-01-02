@@ -46,7 +46,16 @@ TCPServer::~TCPServer() {
         close(socketFd);
 }
 void TCPServer::resetLobbyStartTime() {
+
     lobbyStartTime = std::chrono::steady_clock::now();
+}
+void TCPServer::resetLobby() {
+    std::lock_guard lock(state->mtx);
+    state->phase = MatchPhase::Lobby;
+
+    clientManager->resetAll();
+    resetLobbyStartTime();
+    std::cout << "Lobby has been reset\n";
 }
 int TCPServer::timeUntilStart() const {
     const auto now = std::chrono::steady_clock::now();
@@ -58,6 +67,18 @@ int TCPServer::timeUntilStart() const {
 void TCPServer::countdownToLobbyEnd() const {
     std::thread([this]() {
         while (true) {
+            {
+                std::lock_guard<std::mutex> lock(state->mtx);
+                if (state->phase == MatchPhase::Finished) {
+                    return;
+                }
+            }
+            const int connected = clientManager->getNumberOfConnectedClients();
+           if (connected == 0) {
+               // Freeze countdown until someone joins
+               std::this_thread::sleep_for(std::chrono::seconds(1));
+               continue;
+           }
             const int remaining = timeUntilStart();
             std::cout << "\rRace starts in: " << remaining << "s" << std::flush;
 
@@ -66,7 +87,7 @@ void TCPServer::countdownToLobbyEnd() const {
                 {
                     std::lock_guard<std::mutex> lock(state->mtx);
                     state->phase = MatchPhase::Running;
-                    state->endMatch();
+
                 }
                 state->cv.notify_all();
                 auto &clients = clientManager->getAllClients();

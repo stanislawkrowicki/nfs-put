@@ -57,8 +57,9 @@ public:
 
     void startRaceStartCountdown() const;
     void resetLobbyStartTime();
+    void resetLobby();
 
-private:
+  private:
     int socketFd;
 
     const int lobbyEndTimeout{20};

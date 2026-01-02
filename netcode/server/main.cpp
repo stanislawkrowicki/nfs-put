@@ -50,7 +50,9 @@ int main(const int argc, char *argv[]) {
 
         //tcpServer->notifyMatchEnded();
 
+        tcpServer->resetLobbyStartTime();
         Loop::reset();
+        tcpServer->resetLobby();
         clientManager->resetAll();
 
         {

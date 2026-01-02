@@ -23,6 +23,7 @@ public:
             }
         }
         clients.clear();
+        numberOfConnectedClients=0;
     }
 
     bool nameTaken(const std::string & nickname, const uint16_t client_id) {
