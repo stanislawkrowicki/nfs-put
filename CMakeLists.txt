@@ -64,6 +64,31 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nlohmann_json)
 
+FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui
+        GIT_TAG v1.92.5
+)
+
+FetchContent_MakeAvailable(imgui)
+
+FetchContent_GetProperties(imgui SOURCE_DIR IMGUI_SOURCE_DIR)
+
+set(IMGUI_SRCS
+        ${IMGUI_SOURCE_DIR}/imgui.cpp
+        ${IMGUI_SOURCE_DIR}/imgui_draw.cpp
+        ${IMGUI_SOURCE_DIR}/imgui_tables.cpp
+        ${IMGUI_SOURCE_DIR}/imgui_widgets.cpp
+        ${IMGUI_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+add_library(imgui STATIC ${IMGUI_SRCS})
+
+target_include_directories(imgui PUBLIC
+        ${IMGUI_SOURCE_DIR}
+        ${IMGUI_SOURCE_DIR}/backends
+)
 
 add_executable(nfsput main.cpp shader.cpp
         camera.hpp
@@ -135,7 +160,7 @@ target_include_directories(nfsput PRIVATE ${glm_SOURCE_DIR} ${stb_SOURCE_DIR} ${
 if (UNIX)
     find_package(OpenGL REQUIRED)
     find_package(GLEW REQUIRED)
-    target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW)
+    target_link_libraries(nfsput PRIVATE OpenGL::GL GLEW::GLEW imgui)
 
 elseif (WIN32)
     # OpenGL
@@ -146,7 +171,7 @@ elseif (WIN32)
     set(GLEW_LIBRARY "glew-2.1.0/lib/Release/x64/glew32.lib")
 
     target_include_directories(nfsput PRIVATE ${GLEW_INCLUDE_DIR})
-    target_link_libraries(nfsput PRIVATE ${GLEW_LIBRARY})
+    target_link_libraries(nfsput PRIVATE ${GLEW_LIBRARY} imgui)
 endif()
 
 set(MODELS_DIR "${CMAKE_SOURCE_DIR}/models/")

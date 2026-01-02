@@ -36,10 +36,12 @@
 #include "netcode/shared/packets/tcp/client/udp_info_packet.hpp"
 #include "netcode/shared/packets/udp/client/ping_packet.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #define STB_EASY_FONT_IMPLEMENTATION
 #include "stb_easy_font.h"
-
-
 
 using namespace std::chrono;
 
@@ -378,6 +380,18 @@ void drawTextAboveCarOrtho(const glm::vec3 &carPos, const std::string &nickname,
     drawText2DOrtho(sx, sy, nickname.c_str(), textShader);
 }
 
+void exampleDrawText() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Debug");
+    ImGui::Text("POZDRAWIAM J.K.");
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
 
 void drawScene(GLFWwindow *window) {
 
@@ -637,6 +651,13 @@ int main() {
     setupText();
     setupTextOrtho(currentWindowWidth, currentWindowHeight);
 
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    (void) io;
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 450");
+
     auto &physics = Physics::getInstance();
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
     physics.initPhysics(triMesh);
@@ -720,7 +741,9 @@ int main() {
         // opponent->updateSteering();
 
         drawScene(window);
-        drawDebugCubeNoCamera();
+        // drawDebugCubeNoCamera();
+
+        exampleDrawText();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
