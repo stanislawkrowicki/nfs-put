@@ -14,9 +14,11 @@
 
 #include "../shared/opponent_info.hpp"
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
-#include "../shared/packets/tcp/server/race_start_packet.hpp"
+#include "../shared/packets/tcp/server/start_game_packet.hpp"
 #include "../shared/packets/tcp/server/client_disconnected_packet.hpp"
 #include "../shared/packets/tcp/server/opponents_info_packet.hpp"
+#include "../shared/packets/tcp/server/race_start_countdown_packet.hpp"
+#include "handlers/client_game_loaded_handler.hpp"
 #include "handlers/name_handler.hpp"
 #include "handlers/udp_info_handler.hpp"
 
@@ -47,11 +49,11 @@ TCPServer::~TCPServer() {
 int TCPServer::timeUntilStart() const {
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lobbyStartTime).count();
-    const int remaining = raceStartTimeout - static_cast<int>(elapsed);
+    const int remaining = lobbyEndTimeout - static_cast<int>(elapsed);
     return remaining > 0 ? remaining : 0;
 }
 
-void TCPServer::startCountdown() const {
+void TCPServer::countdownToLobbyEnd() const {
     std::thread([this]() {
         while (true) {
             const int remaining = timeUntilStart();
@@ -63,10 +65,11 @@ void TCPServer::startCountdown() const {
                     state->udpReady = true;
                 }
                 state->cv.notify_all();
-                const auto &clients = clientManager->getAllClients();
+                auto &clients = clientManager->getAllClients();
 
-                for (const auto &client: clients | std::views::values) {
+                for (auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
+                    client.state = ClientStateLobby::InGame;
                     auto packet = StartGamePacket();
                     packet.gridPosition = client.gridPosition;
                     const auto serialized = TCPPacket::serialize(packet);
@@ -79,6 +82,14 @@ void TCPServer::startCountdown() const {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }).detach();
+}
+
+void TCPServer::startRaceStartCountdown() const {
+    auto packet = RaceStartCountdownPacket();
+    packet.secondsUntilStart = raceStartTimeout;
+    const auto serialized = TCPPacket::serialize(packet);
+
+    sendToAllInGame(serialized, sizeof(packet));
 }
 
 void TCPServer::listen(const char *port) {
@@ -95,7 +106,7 @@ void TCPServer::listen(const char *port) {
     if (::listen(socketFd, SOMAXCONN))
         throw std::runtime_error(std::string("TcpBSDServer listen failed: ") + strerror(errno));
     freeaddrinfo(res);
-    startCountdown();
+    countdownToLobbyEnd();
     loop();
 }
 
@@ -158,6 +169,14 @@ void TCPServer::sendToAllInLobbyExcept(const PacketBuffer &buf, ssize_t size, co
         }
     }
 }
+
+void TCPServer::sendToAllInGame(const PacketBuffer &data, const ssize_t size) const {
+    for (const auto &client: clientManager->getAllClients() | std::views::values) {
+        if (client.state == ClientStateLobby::InGame)
+            send(client, std::move(data), size);
+    }
+}
+
 void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const uint16_t exceptId) const {
     const auto client = clientManager->getClient(exceptId);
     sendToAllExcept(data, size, *client);
@@ -202,6 +221,9 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
                 UdpInfoHandler::handle(std::move(payload), client, clientManager);
                 break;
 
+            case TCPPacketType::ClientGameLoaded:
+                ClientGameLoadedHandler::handle(client, clientManager, this);
+                break;
             default:
                 std::cerr << "Received a packet with unknown id: " << static_cast<uint8_t>(type) << std::endl;
         }

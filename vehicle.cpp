@@ -239,3 +239,15 @@ void Vehicle::printDebugPosition() const {
     std::cout << pos.getX() << " " << pos.getY() << " " << pos.getZ() << " | " << rot.getX() << " " << rot.getY() << " "
             << rot.getZ() << " " << rot.getW() << std::endl;
 }
+
+void Vehicle::freeze() const {
+    const auto body = btVehicle->getRigidBody();
+    body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+    body->setActivationState(DISABLE_DEACTIVATION);
+}
+
+void Vehicle::unfreeze() const {
+    const auto body = btVehicle->getRigidBody();
+    body->setCollisionFlags(body->getCollisionFlags() & ~btCollisionObject::CF_KINEMATIC_OBJECT);
+    body->setActivationState(ACTIVE_TAG);
+}

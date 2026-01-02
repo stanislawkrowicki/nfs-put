@@ -13,5 +13,7 @@ enum class TCPPacketType : uint8_t {
     ClientConnected,
     ClientDisconnected,
     LobbyClientList,
-    OpponentsInfo
+    OpponentsInfo,
+    ClientGameLoaded,
+    RaceStartCountdown
 };

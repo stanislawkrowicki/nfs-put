@@ -29,6 +29,12 @@ public:
 
     void setGameReady();
 
+    void setRaceStartTime(std::chrono::time_point<std::chrono::steady_clock> time);
+
+    int getTimeUntilRaceStart() const;
+
+    bool isRaceStartCountdownActive() const;
+
     uint8_t getGridPosition() const;
 
     void setGridPosition(uint8_t gridPos);
@@ -48,6 +54,9 @@ private:
     mutable std::string lastLobbyMessage; // latest lobby + countdown from server
 
     uint8_t gridPosition;
+
+    std::chrono::time_point<std::chrono::steady_clock> raceStartTime;
+    bool countdownUntilStart{false};
 
     [[noreturn]]
     void loop();

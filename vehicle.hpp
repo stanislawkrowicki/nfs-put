@@ -74,4 +74,8 @@ public:
     float applyRotationToWheel(size_t wheelIndex, float deltaRotation);
 
     void printDebugPosition() const;
+
+    void freeze() const;
+
+    void unfreeze() const;
 };

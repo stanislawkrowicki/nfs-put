@@ -4,8 +4,10 @@
 #include <string>
 enum class ClientStateLobby {
     WaitingForNick,
-    InLobby
+    InLobby,
+    InGame
 };
+
 struct ClientHandle {
     int tcpSocketFd;
     mutable sockaddr_in udpAddr;
@@ -17,4 +19,5 @@ struct ClientHandle {
     ClientStateLobby state = ClientStateLobby::WaitingForNick;
 
     uint8_t gridPosition;
+    bool gameLoaded;
 };

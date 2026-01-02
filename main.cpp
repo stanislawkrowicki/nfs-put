@@ -32,6 +32,7 @@
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/client/tcp_client.hpp"
+#include "netcode/shared/packets/tcp/client/client_game_loaded_packet.hpp"
 #include "netcode/shared/packets/tcp/client/udp_info_packet.hpp"
 #include "netcode/shared/packets/udp/client/ping_packet.hpp"
 
@@ -523,6 +524,7 @@ int main() {
     const auto vehicleModel = VehicleModelCache::getDefaultVehicleModel();
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
+    playerVehicle->freeze();
 
     std::thread udpListenThread([udpClient] {
         const auto packet = UDPPacket::create<PingPacket>(0, nullptr, 0);
@@ -553,9 +555,18 @@ int main() {
     auto &opponentManager = OpponentManager::getInstance();
     opponentManager.setOpenGLReady();
 
+    tcpClient->send(TCPPacket::serialize(ClientGameLoadedPacket()), sizeof(ClientGameLoadedPacket));
+
+    bool didStart = false;
+
     auto lastTick = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
         physics.stepSimulation(deltaTime);
+
+        if (!didStart && tcpClient->isRaceStartCountdownActive() && tcpClient->getTimeUntilRaceStart() == 0) {
+            playerVehicle->unfreeze();
+            didStart = true;
+        }
 
         // playerVehicle->getBtVehicle()->updateVehicle(deltaTime);
         if (steady_clock::now() - lastTick > milliseconds(1000 / 32)) {

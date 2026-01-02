@@ -43,6 +43,8 @@ public:
 
     void sendToAllInLobbyExcept(const PacketBuffer &data, ssize_t size, const ClientHandle &except) const;
 
+    void sendToAllInGame(const PacketBuffer &data, ssize_t size) const;
+
     void receivePacketFromClient(ClientHandle &client);
 
     void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size, ClientHandle &client);
@@ -54,12 +56,17 @@ public:
     [[nodiscard]]
     int timeUntilStart() const;
 
-    void startCountdown() const;
+    void countdownToLobbyEnd() const;
+
+    void startRaceStartCountdown() const;
+
 private:
     int socketFd;
 
-    const int raceStartTimeout{15};
+    const int lobbyEndTimeout{15};
     std::chrono::steady_clock::time_point lobbyStartTime;
+
+    const int raceStartTimeout{5};
 
     [[noreturn]] void loop();
 

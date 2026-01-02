@@ -105,7 +105,7 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/packets/tcp/tcp_packet_type.hpp
         netcode/shared/packets/tcp/tcp_packet.hpp
         netcode/shared/packets/tcp/tcp_packet_header.hpp
-        netcode/shared/packets/tcp/server/race_start_packet.hpp
+        netcode/shared/packets/tcp/server/start_game_packet.hpp
         netcode/shared/packets/tcp/server/provide_name_packet.hpp
         netcode/shared/packets/tcp/client/name_packet.hpp
         netcode/client/handlers/provide_name_handler.hpp
@@ -124,6 +124,9 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/client/handlers/opponents_info_handler.hpp
         netcode/shared/starting_positions.hpp
         netcode/client/handlers/start_game_handler.hpp
+        netcode/shared/packets/tcp/client/client_game_loaded_packet.hpp
+        netcode/shared/packets/tcp/server/race_start_countdown_packet.hpp
+        netcode/client/handlers/race_start_countdown_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

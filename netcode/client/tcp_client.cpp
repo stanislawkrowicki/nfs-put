@@ -19,6 +19,7 @@
 #include "handlers/name_taken_handler.hpp"
 #include "handlers/opponents_info_handler.hpp"
 #include "handlers/provide_name_handler.hpp"
+#include "handlers/race_start_countdown_handler.hpp"
 #include "handlers/start_game_handler.hpp"
 #include "handlers/time_until_start_handler.hpp"
 #include "netcode/server/client_handle.hpp"
@@ -147,6 +148,24 @@ void TCPClient::setGameReady() { {
     state->cv.notify_all();
 }
 
+void TCPClient::setRaceStartTime(const std::chrono::time_point<std::chrono::steady_clock> time) {
+    countdownUntilStart = true;
+    raceStartTime = time;
+}
+
+int TCPClient::getTimeUntilRaceStart() const {
+    const auto now = std::chrono::steady_clock::now();
+    const auto diff = raceStartTime - now;
+
+    const auto secondsRemaining = std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+
+    return std::max(0, static_cast<int>(secondsRemaining));
+}
+
+bool TCPClient::isRaceStartCountdownActive() const {
+    return countdownUntilStart;
+}
+
 uint8_t TCPClient::getGridPosition() const {
     return gridPosition;
 }
@@ -255,10 +274,12 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
             case TCPPacketType::StartGame:
                 StartGameHandler::handle(payload, size, this);
                 break;
-            case TCPPacketType::OpponentsInfo: {
+            case TCPPacketType::OpponentsInfo:
                 OpponentsInfoHandler::handle(payload, size);
                 break;
-            }
+            case TCPPacketType::RaceStartCountdown:
+                RaceStartCountdownHandler::handle(payload, size, this);
+                break;
             default:
                 std::cerr << "Received packet with unknown type: " << static_cast<uint8_t>(type) << std::endl;
         }
