@@ -16,6 +16,14 @@ public:
 
         return &client->second;
     }
+    void resetAll() {
+        for (auto& [id, client] : clients) {
+            if (client.connected) {
+                close(client.tcpSocketFd);
+            }
+        }
+        clients.clear();
+    }
 
     bool nameTaken(const std::string & nickname, const uint16_t client_id) {
         for (auto &val: getAllClients() | std::views::values) {

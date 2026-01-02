@@ -44,7 +44,8 @@ add_executable(server
         ../shared/packets/tcp/server/opponents_info_packet.hpp
         ../shared/opponent_info.hpp
         handlers/client_game_loaded_handler.hpp
-        ../shared/packets/tcp/server/race_start_countdown_packet.hpp)
+        ../shared/packets/tcp/server/race_start_countdown_packet.hpp
+        server_state.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 

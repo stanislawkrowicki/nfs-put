@@ -13,7 +13,7 @@
 
 class NameHandler {
 public:
-    static void handle(const std::string &nickname, ClientHandle &client, const TCPServer *server) {
+    static void handle(const std::string &nickname, ClientHandle &client, TCPServer *server) {
         if (client.state != ClientStateLobby::WaitingForNick) return;
         if (nickname.size() > MAX_NAME_PAYLOAD_SIZE) return;
 
@@ -36,8 +36,12 @@ public:
         TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
     }
 
-    static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, const TCPServer *server) {
+    static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, TCPServer *server) {
         server->clientManager->ToLobby(nickname, client);
+        if (server->clientManager->getNumberOfConnectedClients() == 1) {
+            server->resetLobbyStartTime();
+            server->countdownToLobbyEnd();
+        }
 
         constexpr auto response = NameAcceptedPacket();
         TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));

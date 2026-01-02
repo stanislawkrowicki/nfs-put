@@ -6,13 +6,10 @@
 #include <chrono>
 #include <condition_variable>
 #include "../shared/packets/tcp/tcp_packet.hpp"
+#include "server_state.hpp"
 
 #define MAX_PACKET_SIZE 1024
-struct ServerState {
-    std::mutex mtx;
-    std::condition_variable cv;
-    bool udpReady = false;
-};
+
 class TCPServer final{
 public:
     explicit TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_ptr<ServerState> state);
@@ -59,11 +56,12 @@ public:
     void countdownToLobbyEnd() const;
 
     void startRaceStartCountdown() const;
+    void resetLobbyStartTime();
 
 private:
     int socketFd;
 
-    const int lobbyEndTimeout{15};
+    const int lobbyEndTimeout{20};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     const int raceStartTimeout{5};

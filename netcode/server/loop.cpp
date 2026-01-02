@@ -9,18 +9,24 @@
 using namespace std::chrono;
 
 std::shared_ptr<UDPServer> Loop::server;
-bool Loop::exit = false;
 std::unordered_map<uint16_t, ClientState> Loop::latestClientStates{};
 
-void Loop::run(const std::shared_ptr<UDPServer> &udpServer) {
+void Loop::reset() {
+    latestClientStates.clear();
+}
+void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr<ServerState>& state) {
     server = udpServer;
-    exit = false;
 
     const auto tickDuration = milliseconds(1000 / TICK_RATE);
     int tickCounter = 0;
     auto nextTick = steady_clock::now();
 
-    while (!exit) {
+    while (true) {
+        {
+            std::lock_guard lock(state->mtx);
+            if (state->phase == MatchPhase::Finished)
+                break;
+        }
         nextTick = nextTick + tickDuration;
 
         if (!latestClientStates.empty()) {

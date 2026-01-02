@@ -36,7 +36,7 @@ TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_p
     setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
     makeNonBlocking(socketFd);
-    lobbyStartTime = std::chrono::steady_clock::now();
+    //lobbyStartTime = std::chrono::steady_clock::now();
     this->clientManager = std::move(clientManager);
     this->state = std::move(state);
 };
@@ -45,7 +45,9 @@ TCPServer::~TCPServer() {
     if (socketFd >= 0)
         close(socketFd);
 }
-
+void TCPServer::resetLobbyStartTime() {
+    lobbyStartTime = std::chrono::steady_clock::now();
+}
 int TCPServer::timeUntilStart() const {
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lobbyStartTime).count();
@@ -60,9 +62,11 @@ void TCPServer::countdownToLobbyEnd() const {
             std::cout << "\rRace starts in: " << remaining << "s" << std::flush;
 
             if (remaining <= 0) {
-                std::cout << "\nRace started!\n"; {
+                std::cout << "\nRace started!\n";
+                {
                     std::lock_guard<std::mutex> lock(state->mtx);
-                    state->udpReady = true;
+                    state->phase = MatchPhase::Running;
+                    state->endMatch();
                 }
                 state->cv.notify_all();
                 auto &clients = clientManager->getAllClients();
@@ -106,7 +110,7 @@ void TCPServer::listen(const char *port) {
     if (::listen(socketFd, SOMAXCONN))
         throw std::runtime_error(std::string("TcpBSDServer listen failed: ") + strerror(errno));
     freeaddrinfo(res);
-    countdownToLobbyEnd();
+    //countdownToLobbyEnd();
     loop();
 }
 

@@ -31,16 +31,35 @@ int main(const int argc, char *argv[]) {
     std::thread tcpServerThread([&] {
         tcpServer->listen(argv[1]);
     });
-    {
-        std::unique_lock<std::mutex> lock(state->mtx);
-        state->cv.wait(lock, [&] { return state->udpReady; });
+    tcpServerThread.detach();
+
+    while (true) {
+
+        {
+            std::unique_lock lock(state->mtx);
+            state->cv.wait(lock, [&] {
+                return state->phase == MatchPhase::Running;
+            });
+        }
+
+        std::thread gameThread([&] {
+            Loop::run(udpServer, state);
+        });
+
+        gameThread.join();
+
+        //tcpServer->notifyMatchEnded();
+
+        Loop::reset();
+        clientManager->resetAll();
+
+        {
+            std::lock_guard lock(state->mtx);
+            state->phase = MatchPhase::Lobby;
+        }
+
+        std::cout << "Server reset. Waiting for new clients...\n";
     }
-
-    std::thread gameLoopThread([&] {
-        Loop::run(udpServer);
-    });
-
-    gameLoopThread.join();
 
     return 0;
 }
