@@ -372,7 +372,7 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
         carShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.95f));
         carShader->setUniform("u_lightPos", glm::vec3(-200.0f, 300.0f, 20.0f));
         carShader->setUniform("u_lightIntensity", 0.85f);
-        carShader->setUniform("u_camPos", glm::inverse(view)[3]);
+        carShader->setUniform("u_camPos", glm::vec3(glm::inverse(view)[3]));
 
         carShader->setUniform("u_bodyColor", config.bodyColor);
         vehicleModel->Draw(*carShader);
@@ -430,7 +430,7 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     trackShader->setUniform("u_lightColor", glm::vec3(1.0f, 0.95f, 0.95f));
     trackShader->setUniform("u_lightPos", glm::vec3(-200.0f, 300.0f, 20.0f));
     trackShader->setUniform("u_lightIntensity", 0.85f);
-    trackShader->setUniform("u_camPos", glm::inverse(view)[3]);
+    trackShader->setUniform("u_camPos", glm::vec3(glm::inverse(view)[3]));
 
     trackShader->setUniform("u_brakeLightCount", brakeLightCount);
 
@@ -489,6 +489,21 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_DEBUG, true);
 
+    glfwWindowHint(GLFW_DEPTH_BITS, 32);
+
+    GLFWwindow *window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "NFS PUT", nullptr, nullptr);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        exit(EXIT_FAILURE);
+    }
+
+    glfwMakeContextCurrent(window);
+    GLenum glewErr;
+    if ((glewErr = glewInit()) != GLEW_OK) {
+        std::cerr << "Can't initialize GLEW: " << glewGetErrorString(glewErr);
+    }
+
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
@@ -498,17 +513,7 @@ int main() {
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
     }
 
-    glfwWindowHint(GLFW_DEPTH_BITS, 32);
-
     glfwSetErrorCallback(errorCallback);
-    GLFWwindow *window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "NFS PUT", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-
-    glfwMakeContextCurrent(window);
 
     int fbWidth, fbHeight;
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
@@ -524,11 +529,6 @@ int main() {
 
     /* VSync */
     glfwSwapInterval(1);
-
-    GLenum glewErr;
-    if ((glewErr = glewInit()) != GLEW_OK) {
-        std::cerr << "Can't initialize GLEW: " << glewGetErrorString(glewErr);
-    }
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
