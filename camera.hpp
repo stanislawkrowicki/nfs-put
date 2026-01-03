@@ -76,7 +76,7 @@ class Camera {
     void setCameraMode(Camera_Mode mode);
     [[nodiscard]]
     float getZoom() const;
-
+    glm::vec3 getPosition() const;
   private:
     void updateCameraVectors();
 

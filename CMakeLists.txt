@@ -84,6 +84,7 @@ set(IMGUI_SRCS
 )
 
 add_library(imgui STATIC ${IMGUI_SRCS})
+target_link_libraries(imgui PUBLIC glfw)
 
 target_include_directories(imgui PUBLIC
         ${IMGUI_SOURCE_DIR}

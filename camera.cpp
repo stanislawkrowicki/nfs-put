@@ -18,7 +18,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     Pitch = pitch;
     updateCameraVectors();
 }
-
+glm::vec3 Camera::getPosition() const { return Position; }
 glm::mat4 Camera::GetViewMatrix() const { return glm::lookAt(Position, Position + Front, Up); }
 
 void Camera::ProcessKeyboard(const Camera_Movement direction, const float deltaTime) {

@@ -48,7 +48,6 @@ using namespace std::chrono;
 Shader *simpleShader;
 Shader *carShader;
 Shader *trackShader;
-Shader *textShader;
 
 void errorCallback(int error, const char *description) { fputs(description, stderr); }
 
@@ -69,16 +68,6 @@ OpponentPathGenerator *pathGenerator;
 Opponent *opponent;
 GLuint textVAO = 0, textVBO = 0;
 
-void setupText() {
-    glGenVertexArrays(1, &textVAO);
-    glGenBuffers(1, &textVBO);
-
-    glBindVertexArray(textVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    glBindVertexArray(0);
-}
 
 /* Switching between windowed and fullscreen */
 constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
@@ -108,11 +97,6 @@ void toggleFullscreen(GLFWwindow *window) {
         currentWindowWidth = static_cast<float>(windowedWidth);
         currentWindowHeight = static_cast<float>(windowedHeight);
     }
-}
-void setupTextOrtho(float windowWidth, float windowHeight) {
-    textShader->use();
-    glm::mat4 ortho = glm::ortho(0.0f, windowWidth, windowHeight, 0.0f, -1.0f, 1.0f);
-    textShader->setUniform("u_ortho", ortho);
 }
 
 void processInput(GLFWwindow *window) {
@@ -208,46 +192,8 @@ void setupCubeGeometry() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     glBindVertexArray(0);
 }
-void drawBigTestCube(const glm::mat4 &view, const glm::mat4 &projection) {
-    // Big cube at origin
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 1.0f, -10.0f)); // in front of camera
-    model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));       // big cube
 
-    simpleShader->use();
-    simpleShader->setUniform("V", view);
-    simpleShader->setUniform("P", projection);
-    simpleShader->setUniform("M", model);
-    simpleShader->setUniform("color", glm::vec3(1.0f, 0.0f, 0.0f)); // red cube
 
-    glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-}
-void drawDebugCubeNoCamera()
-{
-    glDisable(GL_DEPTH_TEST); // TEMP: force visibility
-
-    simpleShader->use();
-
-    glm::mat4 M(1.0f);
-    M = glm::translate(M, glm::vec3(0, 0, -3));
-    M = glm::scale(M, glm::vec3(1.5f));
-
-    glm::mat4 V = glm::mat4(1.0f); // NO CAMERA
-    glm::mat4 P = glm::mat4(1.0f); // NO PROJECTION
-
-    simpleShader->setUniform("M", M);
-    simpleShader->setUniform("V", V);
-    simpleShader->setUniform("P", P);
-    simpleShader->setUniform("color", glm::vec3(1, 0, 0));
-
-    glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-
-    glEnable(GL_DEPTH_TEST);
-}
 
 void drawCube(const btTransform &trans, const btVector3 &halfExtents,
               const glm::mat4& view, const glm::mat4& projection)
@@ -342,44 +288,28 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, cons
 
     wheelModel->Draw(*shader);
 }
-void drawText2DOrtho(float x, float y, const char* text, Shader &textShader) {
-    static char buffer[99999]; // stb_easy_font
-    int quads = stb_easy_font_print(0, 0, (char*)text, nullptr, buffer, sizeof(buffer));
 
-    std::vector<float> vertices;
-    for (int i = 0; i < quads*6; i += 6) {
-        float* v0 = (float*)&buffer[i*2 + 0];
-        float* v1 = (float*)&buffer[i*2 + 2];
-        float* v2 = (float*)&buffer[i*2 + 4];
-        vertices.insert(vertices.end(), { x + v0[0], y + v0[1], x + v1[0], y + v1[1], x + v2[0], y + v2[1] });
-    }
 
-    glBindVertexArray(textVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
-
-    textShader.use();
-    textShader.setUniform("u_color", glm::vec3(1.0f, 1.0f, 1.0f));
-
-    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()/2));
-    glBindVertexArray(0);
-}
-
-void drawTextAboveCarOrtho(const glm::vec3 &carPos, const std::string &nickname,
-                            const glm::mat4 &view, const glm::mat4 &projection,
-                            Shader &textShader, float windowWidth, float windowHeight)
+bool worldToScreen(
+    const glm::vec3& worldPos,
+    const glm::mat4& view,
+    const glm::mat4& projection,
+    float screenWidth,
+    float screenHeight,
+    ImVec2& out)
 {
-    glm::vec3 worldPos = carPos + glm::vec3(0.0f, 2.0f, 0.0f);
-    glm::vec4 clip = projection * view * glm::vec4(worldPos,1.0f);
-    if (clip.w <= 0.0f) return;
+    glm::vec4 clip = projection * view * glm::vec4(worldPos, 1.0f);
+
+    if (clip.w <= 0.0f)
+        return false; // behind camera
 
     glm::vec3 ndc = glm::vec3(clip) / clip.w;
-    float sx = (ndc.x * 0.5f + 0.5f) * windowWidth;
-    float sy = (0.5f - ndc.y * 0.5f) * windowHeight; // flip Y
 
-    drawText2DOrtho(sx, sy, nickname.c_str(), textShader);
+    out.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
+    out.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
+
+    return true;
 }
-
 void exampleDrawText() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -393,8 +323,13 @@ void exampleDrawText() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void drawScene(GLFWwindow *window) {
+void drawScene(GLFWwindow *window, TCPClient *client) {
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGuiIO& io = ImGui::GetIO();
+    io.DisplaySize = ImVec2(currentWindowWidth, currentWindowHeight);
 
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
@@ -438,6 +373,7 @@ void drawScene(GLFWwindow *window) {
     constexpr int brakeLightLimit = 8;
 
     // Draw chassis
+    ImDrawList* drawList = ImGui::GetForegroundDrawList();
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
         // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
@@ -480,13 +416,35 @@ void drawScene(GLFWwindow *window) {
         }
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-        glDisable(GL_DEPTH_TEST);
-        glm::vec3 carPos = vehicle->getOpenGLModelMatrix()[3];
 
-        drawText2DOrtho(10.0f, 10.0f, "HELLO TEST", *textShader);
-        drawTextAboveCarOrtho(carPos, config.nickname, view, projection,
-                              *textShader, currentWindowWidth, currentWindowHeight);
-        glEnable(GL_DEPTH_TEST);
+        const glm::vec3 vehicleWorldPos = glm::vec3(vehicle->getOpenGLModelMatrix()[3]);
+
+        // offset above roof
+        glm::vec3 nickPos = vehicleWorldPos + glm::vec3(0.0f, 1.5f, 0.0f);
+
+        ImVec2 screenPos;
+        if (worldToScreen(nickPos, view, projection, currentWindowWidth, currentWindowHeight, screenPos)) {
+            const std::string& nick =
+                config.isPlayerVehicle
+                    ? client->getPlayerNickname()
+                    : config.nickname;
+
+            float distance = glm::distance(camera.getPosition(), nickPos);
+            float scale = glm::clamp(10.0f / distance, 0.5f, 2.0f);
+
+            ImFont* font = ImGui::GetFont();
+            ImVec2 textSize = ImGui::CalcTextSize(nick.c_str());
+            textSize.x *= scale;
+            textSize.y *= scale;
+
+            drawList->AddText(
+                font,
+                18.0f * scale,
+                ImVec2(screenPos.x - textSize.x * 0.5f, screenPos.y),
+                IM_COL32(255, 255, 255, 255),
+                nick.c_str()
+            );
+        }
 
     }
 
@@ -526,6 +484,8 @@ void drawScene(GLFWwindow *window) {
     // for (const auto &waypoint: opponent->waypoints) {
     //     drawWaypoint(waypoint, simpleShader);
     // }
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 }
 
@@ -616,7 +576,6 @@ int main() {
     simpleShader = new Shader("simplest_vert.glsl", nullptr, "simplest_frag.glsl");
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");
-    textShader = new Shader("text_vert.glsl", nullptr, "text_frag.glsl");
 
 
 
@@ -648,8 +607,6 @@ int main() {
 
     setupCubeGeometry();
     setupWheelGeometry();
-    setupText();
-    setupTextOrtho(currentWindowWidth, currentWindowHeight);
 
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
@@ -740,10 +697,10 @@ int main() {
 
         // opponent->updateSteering();
 
-        drawScene(window);
+        drawScene(window, tcpClient.get());
         // drawDebugCubeNoCamera();
 
-        exampleDrawText();
+        //exampleDrawText();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

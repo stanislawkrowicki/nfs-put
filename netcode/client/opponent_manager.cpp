@@ -81,7 +81,7 @@ void OpponentManager::addNewOpponent(const uint16_t &opponentId, const uint8_t g
                                  1.0f);
     config.position = gridPosition.getOrigin();
     config.rotation = gridPosition.getRotation();
-    config.name = nickname;
+    config.nickname = nickname;
 
     enqueueVehicleCreationForOpponent(opponentId, config);
 }
