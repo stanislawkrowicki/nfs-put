@@ -159,6 +159,8 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/packets/tcp/client/lap_count_packet.hpp
         netcode/shared/packets/tcp/server/laps_update_packet.hpp
         netcode/client/handlers/laps_update_handler.hpp
+        netcode/client/handlers/name_accepted_but_in_queue_handler.hpp
+        netcode/client/handlers/queue_to_lobby_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

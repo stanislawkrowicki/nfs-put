@@ -10,6 +10,7 @@
 #include "../../shared/packets/tcp/server/client_connected_packet.hpp"
 #include "../../shared/packets/tcp/server/time_until_start_packet.hpp"
 #include "../../shared/packets/tcp/server/lobby_client_list_packet.hpp"
+#include "../../shared/packets/tcp/server/name_accepted_but_in_queue_packet.hpp"
 
 class NameHandler {
 public:
@@ -41,17 +42,22 @@ public:
     }
 
     static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, TCPServer *server) {
-        server->clientManager->ToLobby(nickname, client);
-        if (server->clientManager->getNumberOfConnectedClients() == 1) {
-            std::lock_guard lock(server->state->mtx);
-            if (server->state->phase == MatchPhase::Lobby) {
-                server->resetLobbyStartTime();
-                server->countdownToLobbyEnd();
+        if (server->clientManager->getNumberOfConnectedClients()<MAX_LOBBY_SIZE && server->state->phase != MatchPhase::Running) {
+            server->clientManager->ToLobby(nickname, client);
+            if (server->clientManager->getNumberOfConnectedClients() == 1) {
+                std::lock_guard lock(server->state->mtx);
+                if (server->state->phase == MatchPhase::Lobby) {
+                    server->resetLobbyStartTime();
+                    server->countdownToLobbyEnd();
+                }
             }
+            constexpr auto response = NameAcceptedPacket();
+            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+        }else {
+            ClientManager::ToQueue(nickname,client);
+            constexpr auto response = NameAcceptedButInQueuePacket();
+            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
         }
-
-        constexpr auto response = NameAcceptedPacket();
-        TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
     }
 
     static void sendClientConnectedPacket(const ClientHandle &client, const TCPServer *server) {

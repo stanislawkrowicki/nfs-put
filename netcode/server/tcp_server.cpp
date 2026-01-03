@@ -18,6 +18,7 @@
 #include "../shared/packets/tcp/server/laps_update_packet.hpp"
 #include "../shared/packets/tcp/server/opponents_info_packet.hpp"
 #include "../shared/packets/tcp/server/race_start_countdown_packet.hpp"
+#include "../shared/packets/tcp/server/queue_to_lobby.hpp"
 #include "handlers/client_game_loaded_handler.hpp"
 #include "handlers/lap_count_handler.hpp"
 #include "handlers/name_handler.hpp"
@@ -72,6 +73,40 @@ void TCPServer::assignColors(){
         client.vehicleColor = colors[colorIndex++];
     }
 }
+void TCPServer::addFromQueue() {
+    auto& clients = clientManager->getAllClients();
+
+    // Count current lobby players
+    size_t lobbyCount = 0;
+    for (const auto& client : clients | std::views::values) {
+        if (client.connected && client.state == ClientStateLobby::InLobby) {
+            ++lobbyCount;
+        }
+    }
+
+    // Fill lobby from queue
+    for (auto& client : clients | std::views::values) {
+        if (lobbyCount >= MAX_LOBBY_SIZE)
+            break;
+
+        if (!client.connected)
+            continue;
+
+        if (client.state == ClientStateLobby::WaitingInQueue) {
+            client.gridPosition = static_cast<uint8_t>(lobbyCount);
+            ++lobbyCount;
+
+            client.state= ClientStateLobby::InLobby;
+            constexpr auto response = QueueToLobbyPacket();
+            send(client, TCPPacket::serialize(response), sizeof(response));
+
+            // Optional: notify client they entered the lobby
+            TimeUntilStartPacket packet{};
+            packet.seconds = timeUntilStart();
+            send(client, TCPPacket::serialize(packet), sizeof(packet));
+        }
+    }
+}
 
 void TCPServer::resetLobby() {
     std::lock_guard lock(state->mtx);
@@ -79,6 +114,7 @@ void TCPServer::resetLobby() {
 
     clientManager->resetAll();
     resetLobbyStartTime();
+    addFromQueue();
     std::cout << "Lobby has been reset\n";
 }
 int TCPServer::timeUntilStart() const {
@@ -109,22 +145,24 @@ void TCPServer::countdownToLobbyEnd(){
             if (remaining <= 0) {
                 assignColors();
                 std::cout << "\nRace started!\n";
+
                 {
                     std::lock_guard<std::mutex> lock(state->mtx);
                     state->phase = MatchPhase::Running;
 
                 }
                 state->cv.notify_all();
+
                 auto &clients = clientManager->getAllClients();
 
                 for (auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
                     client.state = ClientStateLobby::InGame;
-                    auto packet = StartGamePacket();
-                    packet.gridPosition = client.gridPosition;
-                    packet.vehicleColor = client.vehicleColor;
-                    const auto serialized = TCPPacket::serialize(packet);
-                    send(client, serialized, sizeof(packet));
+                    // auto packet = StartGamePacket();
+                    // packet.gridPosition = client.gridPosition;
+                    // packet.vehicleColor = client.vehicleColor;
+                    // const auto serialized = TCPPacket::serialize(packet);
+                    // send(client, serialized, sizeof(packet));
                 }
 
                 for (auto &client: clients | std::views::values) {

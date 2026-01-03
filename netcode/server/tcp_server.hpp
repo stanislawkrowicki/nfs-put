@@ -9,6 +9,8 @@
 
 
 #define MAX_PACKET_SIZE 1024
+#define MAX_LOBBY_SIZE 2
+#define TIME_TO_LAUNCH 20
 
 class TCPServer final {
 public:
@@ -68,7 +70,7 @@ public:
 private:
     int socketFd;
 
-    const int lobbyEndTimeout{10};
+    const int lobbyEndTimeout{TIME_TO_LAUNCH};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     std::vector<PlayerVehicleColor> colors = {
@@ -81,4 +83,5 @@ private:
     [[noreturn]] void loop();
 
     void broadcastPlayers() const;
+    void addFromQueue();
 };

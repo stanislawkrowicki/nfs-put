@@ -49,7 +49,9 @@ add_executable(server
         ../shared/packets/tcp/server/race_start_countdown_packet.hpp
         ../shared/packets/tcp/client/lap_count_packet.hpp
         handlers/lap_count_handler.hpp
-        ../shared/packets/tcp/server/laps_update_packet.hpp)
+        ../shared/packets/tcp/server/laps_update_packet.hpp
+        ../shared/packets/tcp/server/name_accepted_but_in_queue_packet.hpp
+        ../shared/packets/tcp/server/queue_to_lobby.hpp)
 
 target_link_libraries(server PRIVATE LinearMath)
 
