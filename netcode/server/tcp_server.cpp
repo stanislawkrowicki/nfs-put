@@ -16,9 +16,11 @@
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/start_game_packet.hpp"
 #include "../shared/packets/tcp/server/client_disconnected_packet.hpp"
+#include "../shared/packets/tcp/server/laps_update_packet.hpp"
 #include "../shared/packets/tcp/server/opponents_info_packet.hpp"
 #include "../shared/packets/tcp/server/race_start_countdown_packet.hpp"
 #include "handlers/client_game_loaded_handler.hpp"
+#include "handlers/lap_count_handler.hpp"
 #include "handlers/name_handler.hpp"
 #include "handlers/udp_info_handler.hpp"
 
@@ -90,6 +92,14 @@ void TCPServer::startRaceStartCountdown() const {
     const auto serialized = TCPPacket::serialize(packet);
 
     sendToAllInGame(serialized, sizeof(packet));
+}
+
+void TCPServer::broadcastLapsUpdate(const ClientHandle &updatedClient) const {
+    auto packet = LapsUpdatePacket();
+    packet.clientId = updatedClient.id;
+    packet.laps = updatedClient.laps;
+
+    sendToAllExcept(TCPPacket::serialize(packet), sizeof(packet), updatedClient);
 }
 
 void TCPServer::listen(const char *port) {
@@ -224,6 +234,11 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
             case TCPPacketType::ClientGameLoaded:
                 ClientGameLoadedHandler::handle(client, clientManager, this);
                 break;
+
+            case TCPPacketType::LapCount:
+                LapCountHandler::handle(std::move(payload), size, client, this);
+                break;
+
             default:
                 std::cerr << "Received a packet with unknown id: " << static_cast<uint8_t>(type) << std::endl;
         }

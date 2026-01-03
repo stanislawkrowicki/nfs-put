@@ -28,6 +28,7 @@
 #include <thread>
 
 #include "default_vehicle_model.hpp"
+#include "laps.hpp"
 #include "netcode/shared/starting_positions.hpp"
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
@@ -194,7 +195,11 @@ void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     simpleShader->setUniform("M", model);
     simpleShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
+
+    for (int i = 0; i < 6; i++) {
+        glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
+    }
+
     glBindVertexArray(0);
 }
 
@@ -554,8 +559,11 @@ int main() {
 
     auto &opponentManager = OpponentManager::getInstance();
     opponentManager.setOpenGLReady();
-
     tcpClient->send(TCPPacket::serialize(ClientGameLoadedPacket()), sizeof(ClientGameLoadedPacket));
+
+    auto &lapsInstance = Laps::getInstance();
+    lapsInstance.initializeTracker(physics.getDynamicsWorld());
+    lapsInstance.addLocalPlayer(playerVehicle->getBtChassis());
 
     bool didStart = false;
 
@@ -586,10 +594,12 @@ int main() {
         processVehicleInputs(window, playerVehicle, deltaTime);
 
         opponentManager.applyLastInputs(deltaTime);
-
         // opponent->updateSteering();
 
         drawScene(window);
+
+        lapsInstance.updateLocalPlayer();
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

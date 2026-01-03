@@ -1,5 +1,6 @@
 #pragma once
 
+#include "laps.hpp"
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
 #include "netcode/shared/packets/tcp/server/opponents_info_packet.hpp"
@@ -11,6 +12,7 @@ public:
 
         for (const auto &info: opponentInfos) {
             OpponentManager::getInstance().addNewOpponent(info.id, info.gridPosition, info.vehicleColor);
+            Laps::getInstance().addOpponent(info.id);
         }
     }
 };

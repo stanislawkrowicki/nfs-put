@@ -59,6 +59,7 @@ public:
     void countdownToLobbyEnd() const;
 
     void startRaceStartCountdown() const;
+ void broadcastLapsUpdate(const ClientHandle &updatedClient) const;
 
 private:
     int socketFd;

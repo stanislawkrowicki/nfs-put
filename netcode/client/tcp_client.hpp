@@ -39,6 +39,8 @@ public:
 
     void setGridPosition(uint8_t gridPos);
 
+    void sendLapCount(uint8_t lapCount) const;
+
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
