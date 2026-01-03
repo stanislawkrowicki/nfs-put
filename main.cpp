@@ -62,34 +62,32 @@ float lastFrame = 0.0f;
 
 std::shared_ptr<Vehicle> playerVehicle;
 std::shared_ptr<Vehicle> opponentVehicle;
-OpponentPathGenerator *pathGenerator;
-Opponent *opponent;
+OpponentPathGenerator   *pathGenerator;
+Opponent                *opponent;
 
 /* Switching between windowed and fullscreen */
 constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
-bool isFullscreen = false;
-int windowedX, windowedY, windowedWidth, windowedHeight;
-float currentWindowWidth = DEFAULT_WINDOW_WIDTH, currentWindowHeight = DEFAULT_WINDOW_HEIGHT;
+bool            isFullscreen = false;
+int             windowedX, windowedY, windowedWidth, windowedHeight;
+float           currentWindowWidth = DEFAULT_WINDOW_WIDTH, currentWindowHeight = DEFAULT_WINDOW_HEIGHT;
+int             framebufferWidth = DEFAULT_WINDOW_WIDTH;
+int             framebufferHeight = DEFAULT_WINDOW_HEIGHT;
 
 void toggleFullscreen(GLFWwindow *window) {
     isFullscreen = !isFullscreen;
 
-    GLFWmonitor *primaryMonitor = glfwGetPrimaryMonitor();
+    GLFWmonitor       *primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode *mode = glfwGetVideoMode(primaryMonitor);
 
     if (isFullscreen) {
         glfwGetWindowPos(window, &windowedX, &windowedY);
         glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
 
-        glfwSetWindowMonitor(window, primaryMonitor,
-                             0, 0, mode->width, mode->height,
-                             mode->refreshRate);
+        glfwSetWindowMonitor(window, primaryMonitor, 0, 0, mode->width, mode->height, mode->refreshRate);
         currentWindowWidth = static_cast<float>(mode->width);
         currentWindowHeight = static_cast<float>(mode->height);
     } else {
-        glfwSetWindowMonitor(window, nullptr,
-                             windowedX, windowedY, windowedWidth, windowedHeight,
-                             mode->refreshRate);
+        glfwSetWindowMonitor(window, nullptr, windowedX, windowedY, windowedWidth, windowedHeight, mode->refreshRate);
         currentWindowWidth = static_cast<float>(windowedWidth);
         currentWindowHeight = static_cast<float>(windowedHeight);
     }
@@ -109,8 +107,7 @@ void processKeyCallbacks(GLFWwindow *window, const int key, const int scancode, 
     if (key == GLFW_KEY_F6 && action == GLFW_PRESS) Physics::getInstance().getDebugDrawer()->toggle();
     if (key == GLFW_KEY_F11 && action == GLFW_PRESS) toggleFullscreen(window);
     if (key == GLFW_KEY_X && action == GLFW_PRESS) pathGenerator->addWaypointFromVehicle(playerVehicle);
-    if (key == GLFW_KEY_F10 && action == GLFW_PRESS)
-        pathGenerator->saveWaypointsToFile("paths.json");
+    if (key == GLFW_KEY_F10 && action == GLFW_PRESS) pathGenerator->saveWaypointsToFile("paths.json");
     if (key == GLFW_KEY_F7 && action == GLFW_PRESS) playerVehicle->printDebugPosition();
 }
 
@@ -126,8 +123,31 @@ void processVehicleInputs(GLFWwindow *window, const std::shared_ptr<Vehicle> &ve
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
-    currentWindowHeight = static_cast<float>(height);
-    currentWindowWidth = static_cast<float>(width);
+    framebufferWidth = width;
+    framebufferHeight = height;
+
+    int winW, winH;
+    glfwGetWindowSize(window, &winW, &winH);
+    currentWindowWidth = static_cast<float>(winW);
+    currentWindowHeight = static_cast<float>(winH);
+}
+bool worldToScreenFramebuffer(const glm::vec3 &worldPos, const glm::mat4 &view, const glm::mat4 &projection,
+                              int fbWidth, int fbHeight, ImVec2 &out) {
+    glm::vec4 clip = projection * view * glm::vec4(worldPos, 1.0f);
+
+    if (clip.w <= 0.0f) return false;
+
+    glm::vec3 ndc = glm::vec3(clip) / clip.w;
+
+    out.x = (ndc.x * 0.5f + 0.5f) * fbWidth;
+    out.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * fbHeight;
+
+    return true;
+}
+ImVec2 framebufferToImGui(const ImVec2 &fbPos) {
+    float scaleX = currentWindowWidth / framebufferWidth;
+    float scaleY = currentWindowHeight / framebufferHeight;
+    return ImVec2(fbPos.x * scaleX, fbPos.y * scaleY);
 }
 
 void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
@@ -160,23 +180,83 @@ GLuint cubeVAO, cubeVBO;
 void setupCubeGeometry() {
     float vertices[] = {
         // front face
-        -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
         // back face
-        -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
-        0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        -0.5f,
         // left face
-        -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
         // right face
-        0.5f, -0.5f, -0.5f, 0.5f, 0.5f, -0.5f,
-        0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+        0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
         // top face
-        -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
+        -0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
         // bottom face
-        -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f,
-        0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        -0.5f,
+        0.5f,
+        -0.5f,
+        0.5f,
     };
 
     glGenVertexArrays(1, &cubeVAO);
@@ -221,12 +301,12 @@ void drawWaypoint(const glm::vec3 &position, const Shader *shader) {
 }
 
 GLuint wheelVAO = 0, wheelVBO = 0;
-int wheelVertexCount = 0;
+int    wheelVertexCount = 0;
 
 void setupWheelGeometry(int segments = 24) {
     std::vector<float> vertices;
-    float radius = 0.9f;
-    float halfLength = 0.15f; // wheel width
+    float              radius = 0.9f;
+    float              halfLength = 0.15f; // wheel width
 
     for (int i = 0; i <= segments; ++i) {
         float theta = 2.0f * 3.14 * i / segments;
@@ -255,7 +335,7 @@ void setupWheelGeometry(int segments = 24) {
 
 void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, const float rollingRotation) {
     const btTransform trans = wheel.m_worldTransform;
-    btScalar mat[16];
+    btScalar          mat[16];
     trans.getOpenGLMatrix(mat);
     glm::mat4 model = glm::make_mat4(mat);
     model = glm::scale(model, glm::vec3(1.4f, 1.4f, 1.4f));
@@ -275,31 +355,11 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, cons
     wheelModel->Draw(*shader);
 }
 
-bool worldToScreen(
-    const glm::vec3& worldPos,
-    const glm::mat4& view,
-    const glm::mat4& projection,
-    const float screenWidth,
-    const float screenHeight,
-    ImVec2 &out) {
-    const glm::vec4 clip = projection * view * glm::vec4(worldPos, 1.0f);
-
-    if (clip.w <= 0.0f)
-        return false; // behind camera
-
-    const glm::vec3 ndc = glm::vec3(clip) / clip.w;
-
-    out.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
-    out.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
-
-    return true;
-}
-
 void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO &io = ImGui::GetIO();
     io.DisplaySize = ImVec2(currentWindowWidth, currentWindowHeight);
 
     const auto currentFrame = static_cast<float>(glfwGetTime());
@@ -320,38 +380,37 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     btTransform transform = playerVehicle->getBtVehicle()->getChassisWorldTransform();
     btMatrix3x3 rotMatrix = transform.getBasis();
 
-    //Car has different Y and Z axis
+    // Car has different Y and Z axis
     float vehYaw = atan2(rotMatrix[0][0], rotMatrix[0][2]);
     vehYaw = glm::degrees(vehYaw);
 
     btVector3 linearVelocity = playerVehicle->getBtVehicle()->getRigidBody()->getLinearVelocity();
-    float vehicleSpeed = linearVelocity.length();
+    float     vehicleSpeed = linearVelocity.length();
 
     camera.updateCamera(*vehPos);
 
     // view/projection transformations
-    const auto aspectRatio = currentWindowWidth / currentWindowHeight;
-    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
-                                                  0.1f, 1000.0f);
+    const auto      aspectRatio = currentWindowWidth / currentWindowHeight;
+    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio, 0.1f, 1000.0f);
     const glm::mat4 view = camera.GetViewMatrix();
 
     Skybox::draw(view, projection);
 
     std::vector<glm::vec3> brakeLightPositions;
     std::vector<glm::vec3> brakeLightDirections;
-    int brakeLightCount = 0;
+    int                    brakeLightCount = 0;
     /* Limit for the shader */
     constexpr int brakeLightLimit = 8;
 
     ImDrawList *drawList = ImGui::GetForegroundDrawList();
 
     // Draw chassis
-    for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
+    for (const auto &vehicle : VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
         // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
         const auto vehicleModel = vehicle->getModel();
 
-        glm::mat4 modelMatrix = vehicle->getOpenGLModelMatrix();
+        glm::mat4  modelMatrix = vehicle->getOpenGLModelMatrix();
         const auto vehiclePos = modelMatrix[3];
         const auto forwardVector = modelMatrix[2];
 
@@ -391,28 +450,44 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 
         const auto vehicleWorldPos = glm::vec3(vehicle->getOpenGLModelMatrix()[3]);
 
-        // offset above roof
         glm::vec3 nickPos = vehicleWorldPos + glm::vec3(0.0f, 1.5f, 0.0f);
 
-        ImVec2 screenPos;
-        if (worldToScreen(nickPos, view, projection, currentWindowWidth, currentWindowHeight, screenPos)) {
+        ImVec2 fbPos;
+        if (worldToScreenFramebuffer(
+                nickPos,
+                view,
+                projection,
+                framebufferWidth,
+                framebufferHeight,
+                fbPos))
+        {
+            ImVec2 screenPos = framebufferToImGui(fbPos);
+
             const std::string& nick =
                 config.isPlayerVehicle
                     ? tcpClient->getPlayerNickname()
                     : config.nickname;
 
             float distance = glm::distance(camera.getPosition(), nickPos);
-            float scale = glm::clamp(10.0f / distance, 0.5f, 2.0f);
+            float distanceScale = glm::clamp(10.0f / distance, 0.6f, 1.8f);
+
+            float baseFontSize = 30.0f;
+            float resolutionScale = currentWindowHeight / 1080.0f;
+            float fontSize = baseFontSize * resolutionScale * distanceScale;
 
             ImFont* font = ImGui::GetFont();
             ImVec2 textSize = ImGui::CalcTextSize(nick.c_str());
-            textSize.x *= scale;
-            textSize.y *= scale;
+            float sizeScale = fontSize / baseFontSize;
+            textSize.x *= sizeScale;
+            textSize.y *= sizeScale;
 
-            drawList->AddText(
+            ImGui::GetForegroundDrawList()->AddText(
                 font,
-                18.0f * scale,
-                ImVec2(screenPos.x - textSize.x * 0.5f, screenPos.y),
+                fontSize,
+                ImVec2(
+                    screenPos.x - textSize.x * 0.5f,
+                    screenPos.y - textSize.y
+                ),
                 IM_COL32(255, 255, 255, 255),
                 nick.c_str()
             );
@@ -445,8 +520,7 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 
     const auto debugDrawer = Physics::getInstance().getDebugDrawer();
 
-    if (debugDrawer->isEnabled())
-        debugDrawer->draw(projection * view * model);
+    if (debugDrawer->isEnabled()) debugDrawer->draw(projection * view * model);
 
     // simpleShader->use();
     // simpleShader->setUniform("V", view);
@@ -461,11 +535,9 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 
 int main() {
 
-    auto state = std::make_shared<ClientState>();
-    auto tcpClient = std::make_shared<TCPClient>(state);
-    std::thread tcpListenThread([tcpClient] {
-        tcpClient->connect("127.0.0.1","1313");
-    });
+    auto        state = std::make_shared<ClientState>();
+    auto        tcpClient = std::make_shared<TCPClient>(state);
+    std::thread tcpListenThread([tcpClient] { tcpClient->connect("127.0.0.1", "1313"); });
     {
         std::unique_lock<std::mutex> lock(state->mtx);
         state->cv.wait(lock, [&] { return state->ready; });
@@ -482,7 +554,6 @@ int main() {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         exit(EXIT_FAILURE);
     }
-
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -549,15 +620,15 @@ int main() {
 
     auto meshes = trackModel->getMeshes();
 
-    std::vector<Vertex> vertices;
+    std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
 
     unsigned int vertexOffset = 0;
 
-    for (const auto &mesh: meshes) {
+    for (const auto &mesh : meshes) {
         vertices.insert(vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
 
-        for (unsigned int index: mesh.indices) {
+        for (unsigned int index : mesh.indices) {
             indices.push_back(index + vertexOffset);
         }
 
@@ -583,13 +654,13 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 450");
 
-    auto &physics = Physics::getInstance();
+    auto      &physics = Physics::getInstance();
     const auto triMesh = Physics::btTriMeshFromModel(vertices, indices);
     physics.initPhysics(triMesh);
 
     const VehicleConfig defaultConfig;
-    const auto gridPositionIndex = tcpClient->getGridPosition();
-    const auto gridPosition = startingPositions[gridPositionIndex % std::size(startingPositions)];
+    const auto          gridPositionIndex = tcpClient->getGridPosition();
+    const auto          gridPosition = startingPositions[gridPositionIndex % std::size(startingPositions)];
 
     defaultConfig.position = gridPosition.getOrigin();
     defaultConfig.rotation = gridPosition.getRotation();
@@ -597,8 +668,8 @@ int main() {
     const auto vehicleModel = VehicleModelCache::getDefaultVehicleModel();
 
     PlayerVehicleColor vehicleColor = tcpClient->getColor();
-    defaultConfig.bodyColor=glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(),
-                                 1.0f);
+    defaultConfig.bodyColor =
+        glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(), 1.0f);
 
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
     playerVehicle->freeze();
@@ -684,8 +755,3 @@ int main() {
 
     exit(EXIT_SUCCESS);
 }
-
-
-
-
-
