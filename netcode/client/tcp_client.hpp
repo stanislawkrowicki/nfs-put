@@ -8,6 +8,7 @@
 #include <condition_variable>
 
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
+#include "netcode/shared/packets/tcp/server/start_game_packet.hpp"
 
 struct ClientState {
     std::mutex mtx;
@@ -39,7 +40,8 @@ public:
     uint8_t getGridPosition() const;
 
     void setGridPosition(uint8_t gridPos);
-
+    void setColor(PlayerVehicleColor vehicle_color);
+    PlayerVehicleColor getColor() const;
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
@@ -55,6 +57,7 @@ private:
     mutable std::string lastLobbyMessage; // latest lobby + countdown from server
 
     uint8_t gridPosition;
+    PlayerVehicleColor vehicleColor;
 
     std::chrono::time_point<std::chrono::steady_clock> raceStartTime;
     bool countdownUntilStart{false};

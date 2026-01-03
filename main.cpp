@@ -631,6 +631,9 @@ int main() {
     const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
                                                   0.1f, 1000.0f);
     const glm::mat4 view = camera.GetViewMatrix();
+    PlayerVehicleColor vehicleColor = tcpClient->getColor();
+    defaultConfig.bodyColor=glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(),
+                                 1.0f);
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
     playerVehicle->freeze();
 

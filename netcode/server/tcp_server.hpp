@@ -7,6 +7,8 @@
 #include <condition_variable>
 #include "../shared/packets/tcp/tcp_packet.hpp"
 #include "server_state.hpp"
+#include "../shared/opponent_info.hpp"
+
 
 #define MAX_PACKET_SIZE 1024
 
@@ -53,8 +55,8 @@ public:
     [[nodiscard]]
     int timeUntilStart() const;
 
-    void countdownToLobbyEnd() const;
-
+    void countdownToLobbyEnd();
+    void assignColors();
     void startRaceStartCountdown() const;
     void resetLobbyStartTime();
     void resetLobby();
@@ -65,6 +67,10 @@ public:
     const int lobbyEndTimeout{10};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
+    std::vector<PlayerVehicleColor> colors = {
+        {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0},
+        {255, 0, 255}, {0, 255, 255}, {255, 165, 0}, {128, 0, 128}
+    };
     const int raceStartTimeout{5};
 
     [[noreturn]] void loop();

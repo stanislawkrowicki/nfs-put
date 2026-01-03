@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../shared/opponent_info.hpp"
+
 #include <netinet/in.h>
 #include <string>
 enum class ClientStateLobby {
@@ -17,6 +19,8 @@ struct ClientHandle {
     int lastReceivedPacketId;
     std::string nick;
     ClientStateLobby state = ClientStateLobby::WaitingForNick;
+
+    PlayerVehicleColor vehicleColor;
 
     uint8_t gridPosition;
     bool gameLoaded;

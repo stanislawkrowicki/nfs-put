@@ -54,7 +54,7 @@ void TCPClient::refreshScreen() const {
     // Lobby header
     std::cout << "--- Lobby ---\n";
 
-    int maxPlayers = 4;
+    int maxPlayers = 8;
     for (int i = 0; i < maxPlayers; ++i) {
         if (i < static_cast<int>(lobbyNicks.size())) {
             std::cout << i + 1 << ". " << lobbyNicks[i] << "\n";
@@ -145,6 +145,12 @@ void TCPClient::setGameReady() { {
         state->ready = true;
     }
     state->cv.notify_all();
+}
+void TCPClient::setColor(PlayerVehicleColor vehicle_color) {
+    vehicleColor = vehicle_color;
+}
+PlayerVehicleColor TCPClient::getColor() const {
+    return vehicleColor;
 }
 
 void TCPClient::setRaceStartTime(const std::chrono::time_point<std::chrono::steady_clock> time) {

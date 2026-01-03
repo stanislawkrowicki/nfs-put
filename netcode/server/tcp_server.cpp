@@ -12,7 +12,6 @@
 #include <condition_variable>
 #include <ranges>
 
-#include "../shared/opponent_info.hpp"
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/start_game_packet.hpp"
 #include "../shared/packets/tcp/server/client_disconnected_packet.hpp"
@@ -21,6 +20,8 @@
 #include "handlers/client_game_loaded_handler.hpp"
 #include "handlers/name_handler.hpp"
 #include "handlers/udp_info_handler.hpp"
+
+#include <random>
 
 static int makeNonBlocking(const int fd) {
     const int flags = fcntl(fd, F_GETFL, 0);
@@ -34,7 +35,6 @@ TCPServer::TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_p
 
     constexpr int one = 1;
     setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
     makeNonBlocking(socketFd);
     //lobbyStartTime = std::chrono::steady_clock::now();
     this->clientManager = std::move(clientManager);
@@ -49,6 +49,28 @@ void TCPServer::resetLobbyStartTime() {
 
     lobbyStartTime = std::chrono::steady_clock::now();
 }
+void TCPServer::assignColors(){
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(colors.begin(), colors.end(), g);
+    auto &clients = clientManager->getAllClients();
+    size_t colorIndex = 0;
+
+    for (auto &pair : clients) {
+        auto &client = pair.second;
+
+        if (!client.connected || client.state != ClientStateLobby::InLobby)
+            continue;
+
+        if (colorIndex >= colors.size()) {
+            std::cerr << "Warning: more players than colors, reusing colors\n";
+            colorIndex = 0;
+        }
+
+        client.vehicleColor = colors[colorIndex++];
+    }
+}
+
 void TCPServer::resetLobby() {
     std::lock_guard lock(state->mtx);
     state->phase = MatchPhase::Lobby;
@@ -64,7 +86,7 @@ int TCPServer::timeUntilStart() const {
     return remaining > 0 ? remaining : 0;
 }
 
-void TCPServer::countdownToLobbyEnd() const {
+void TCPServer::countdownToLobbyEnd(){
     std::thread([this]() {
         while (true) {
             {
@@ -83,6 +105,7 @@ void TCPServer::countdownToLobbyEnd() const {
             std::cout << "\rRace starts in: " << remaining << "s" << std::flush;
 
             if (remaining <= 0) {
+                assignColors();
                 std::cout << "\nRace started!\n";
                 {
                     std::lock_guard<std::mutex> lock(state->mtx);
@@ -97,6 +120,7 @@ void TCPServer::countdownToLobbyEnd() const {
                     client.state = ClientStateLobby::InGame;
                     auto packet = StartGamePacket();
                     packet.gridPosition = client.gridPosition;
+                    packet.vehicleColor = client.vehicleColor;
                     const auto serialized = TCPPacket::serialize(packet);
                     send(client, serialized, sizeof(packet));
                 }
@@ -279,7 +303,7 @@ void TCPServer::sendClientOpponentsInfo(const ClientHandle &client) const {
 
         OpponentInfo info{
             .id = opponent.id,
-            .vehicleColor = PlayerVehicleColor(255, 0, 100),
+            .vehicleColor = opponent.vehicleColor,
             .gridPosition = opponent.gridPosition,
             .nickname = opponent.nick
         };
