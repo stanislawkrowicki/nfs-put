@@ -68,7 +68,7 @@ public:
 private:
     int socketFd;
 
-    const int lobbyEndTimeout{15};
+    const int lobbyEndTimeout{10};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     std::vector<PlayerVehicleColor> colors = {
@@ -76,7 +76,7 @@ private:
         {255, 0, 255}, {0, 255, 255}, {255, 165, 0}, {128, 0, 128}
     };
 
-    const int raceStartTimeout{5};
+    const int raceStartTimeout{10};
 
     [[noreturn]] void loop();
 

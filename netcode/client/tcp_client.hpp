@@ -69,7 +69,7 @@ private:
     PlayerVehicleColor vehicleColor;
 
     std::chrono::time_point<std::chrono::steady_clock> raceStartTime;
-    bool countdownUntilStart{false};
+    bool countdownUntilStart{true};
 
     [[noreturn]]
     void loop();

@@ -60,6 +60,9 @@ bool   firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+float goStartTime = -1.0f;
+constexpr float GO_DISPLAY_TIME = 3.0f; // seconds
+
 std::shared_ptr<Vehicle> playerVehicle;
 std::shared_ptr<Vehicle> opponentVehicle;
 OpponentPathGenerator   *pathGenerator;
@@ -149,6 +152,38 @@ ImVec2 framebufferToImGui(const ImVec2 &fbPos) {
     float scaleY = currentWindowHeight / framebufferHeight;
     return ImVec2(fbPos.x * scaleX, fbPos.y * scaleY);
 }
+void drawCenteredText(
+    const std::string& text,
+    float fontSize,
+    float yPercentFromTop,
+    ImU32 color)
+{
+    ImDrawList* drawList = ImGui::GetForegroundDrawList();
+    ImGuiIO& io = ImGui::GetIO();
+    ImFont* font = ImGui::GetFont();
+
+    // Calculate text size AT THE SAME FONT SIZE
+    ImVec2 textSize = font->CalcTextSizeA(
+        fontSize,
+        FLT_MAX,
+        0.0f,
+        text.c_str()
+    );
+
+    ImVec2 pos(
+        (io.DisplaySize.x - textSize.x) * 0.5f,
+        io.DisplaySize.y * yPercentFromTop
+    );
+
+    drawList->AddText(
+        font,
+        fontSize,
+        pos,
+        color,
+        text.c_str()
+    );
+}
+
 
 void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
     auto xPos = static_cast<float>(xposIn);
@@ -528,7 +563,53 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     // for (const auto &waypoint: opponent->waypoints) {
     //     drawWaypoint(waypoint, simpleShader);
     // }
+    if (tcpClient->isRaceStartCountdownActive()) {
 
+        int timeLeft = tcpClient->getTimeUntilRaceStart();
+
+        float baseSize = 160.0f;
+        float resolutionScale = currentWindowHeight / 1080.0f;
+        float fontSize = baseSize * resolutionScale;
+
+        float yPos = 0.15f; // near top, centered horizontally
+
+        if (timeLeft > 0) {
+            // Countdown numbers (3,2,1)
+            drawCenteredText(
+                std::to_string(timeLeft),
+                fontSize,
+                yPos,
+                IM_COL32(255, 255, 255, 255)
+            );
+
+            goStartTime = -1.0f;
+        }
+        else {
+            if (goStartTime < 0.0f)
+                goStartTime = static_cast<float>(glfwGetTime());
+
+            float elapsed = static_cast<float>(glfwGetTime()) - goStartTime;
+
+            if (elapsed < GO_DISPLAY_TIME) {
+                float alpha = 1.0f - (elapsed / GO_DISPLAY_TIME);
+                alpha = glm::clamp(alpha, 0.0f, 1.0f);
+
+                ImU32 color = IM_COL32(
+                    50,
+                    255,
+                    50,
+                    static_cast<int>(alpha * 255)
+                );
+
+                drawCenteredText(
+                    "GO!",
+                    fontSize * 1.1f,
+                    yPos,
+                    color
+                );
+            }
+        }
+    }
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
