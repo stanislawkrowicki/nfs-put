@@ -17,7 +17,11 @@ public:
         if (client.state != ClientStateLobby::WaitingForNick) return;
         if (nickname.size() > MAX_NAME_PAYLOAD_SIZE) return;
 
-        if (server->clientManager->nameTaken(nickname,client.id)) {
+        for (const auto ch: nickname)
+            if (ch < 32 || ch > 126)
+                return;
+
+        if (server->clientManager->nameTaken(nickname, client.id)) {
             sendNameTaken(client);
             return;
         }

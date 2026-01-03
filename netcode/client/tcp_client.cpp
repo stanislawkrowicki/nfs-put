@@ -252,6 +252,13 @@ void TCPClient::handleUserInput() const {
     std::erase(nick, '\n');
     std::erase(nick, '\r');
 
+    for (const char ch: nick) {
+        if (ch < 32 || ch > 126) {
+            std::cout << "Please don't use non-ASCII characters." << std::endl;
+            return;
+        }
+    }
+
     localNick = nick;
 
     const auto [packet, packetSize] = TCPPacket::create<NamePacket>(nick.c_str(), nick.length());
