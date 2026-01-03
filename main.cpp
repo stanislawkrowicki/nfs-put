@@ -28,6 +28,7 @@
 #include <thread>
 
 #include "default_vehicle_model.hpp"
+#include "hud.hpp"
 #include "laps.hpp"
 #include "netcode/shared/starting_positions.hpp"
 #include "netcode/client/opponent_manager.hpp"
@@ -529,6 +530,8 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     //     drawWaypoint(waypoint, simpleShader);
     // }
 
+    HUD::draw();
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -706,7 +709,10 @@ int main() {
 
     auto &lapsInstance = Laps::getInstance();
     lapsInstance.initializeTracker(physics.getDynamicsWorld());
-    lapsInstance.addLocalPlayer(playerVehicle->getBtChassis());
+    lapsInstance.addLocalPlayer(tcpClient->getPlayerNickname(), playerVehicle->getBtChassis());
+    lapsInstance.setLapIncreaseCallback([tcpClient](const int newLapCount) {
+        tcpClient->sendLapCount(newLapCount);
+    });
 
     bool didStart = false;
 

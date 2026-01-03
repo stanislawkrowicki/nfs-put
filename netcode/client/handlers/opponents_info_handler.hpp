@@ -12,7 +12,7 @@ public:
 
         for (const auto &info: opponentInfos) {
             OpponentManager::getInstance().addNewOpponent(info.id, info.gridPosition, info.vehicleColor, info.nickname);
-            Laps::getInstance().addOpponent(info.id);
+            Laps::getInstance().addOpponent(info.id, info.nickname);
         }
     }
 };
