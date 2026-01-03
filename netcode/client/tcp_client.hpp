@@ -18,9 +18,13 @@ struct ClientState {
 class TCPClient {
 public:
     explicit TCPClient(std::shared_ptr<ClientState> state);
+
     ~TCPClient();
+
     void refreshScreen() const;
+
     std::string getPlayerNickname() const;
+
     void displayLobby() const;
 
     void connect(const char* host, const char* port);
@@ -40,8 +44,13 @@ public:
     uint8_t getGridPosition() const;
 
     void setGridPosition(uint8_t gridPos);
+
     void setColor(PlayerVehicleColor vehicle_color);
+
     PlayerVehicleColor getColor() const;
+
+    void sendLapCount(uint8_t lapCount) const;
+
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;

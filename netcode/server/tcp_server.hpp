@@ -1,8 +1,6 @@
 #pragma once
 
-#include "bsd_server.hpp"
 #include "client_manager.hpp"
-#include <string>
 #include <chrono>
 #include <condition_variable>
 #include "../shared/packets/tcp/tcp_packet.hpp"
@@ -12,7 +10,7 @@
 
 #define MAX_PACKET_SIZE 1024
 
-class TCPServer final{
+class TCPServer final {
 public:
     explicit TCPServer(std::shared_ptr<ClientManager> clientManager, std::shared_ptr<ServerState> state);
 
@@ -56,21 +54,28 @@ public:
     int timeUntilStart() const;
 
     void countdownToLobbyEnd();
+
     void assignColors();
+
     void startRaceStartCountdown() const;
+
     void resetLobbyStartTime();
+
     void resetLobby();
 
-  private:
+    void broadcastLapsUpdate(const ClientHandle &updatedClient) const;
+
+private:
     int socketFd;
 
-    const int lobbyEndTimeout{10};
+    const int lobbyEndTimeout{15};
     std::chrono::steady_clock::time_point lobbyStartTime;
 
     std::vector<PlayerVehicleColor> colors = {
         {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0},
         {255, 0, 255}, {0, 255, 255}, {255, 165, 0}, {128, 0, 128}
     };
+
     const int raceStartTimeout{5};
 
     [[noreturn]] void loop();

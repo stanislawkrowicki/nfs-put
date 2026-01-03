@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "model.hpp"
+#include "BulletCollision/CollisionDispatch/btGhostObject.h"
 
 Physics::Physics() {
     collisionConfig = new btDefaultCollisionConfiguration();
@@ -33,6 +34,8 @@ void Physics::initPhysics(const std::unique_ptr<btTriangleMesh> &triMesh) {
 
     /* Config */
     dynamicsWorld->setGravity(btVector3(0, -9.81f, 0));
+
+    dynamicsWorld->getPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
 }
 
 void Physics::stepSimulation(const btScalar timeStep) const {

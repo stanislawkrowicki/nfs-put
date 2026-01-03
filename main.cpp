@@ -28,6 +28,7 @@
 #include <thread>
 
 #include "default_vehicle_model.hpp"
+#include "laps.hpp"
 #include "netcode/shared/starting_positions.hpp"
 #include "netcode/client/opponent_manager.hpp"
 #include "netcode/shared/client_inputs.hpp"
@@ -39,9 +40,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-
-#define STB_EASY_FONT_IMPLEMENTATION
-#include "stb_easy_font.h"
 
 using namespace std::chrono;
 
@@ -66,8 +64,6 @@ std::shared_ptr<Vehicle> playerVehicle;
 std::shared_ptr<Vehicle> opponentVehicle;
 OpponentPathGenerator *pathGenerator;
 Opponent *opponent;
-GLuint textVAO = 0, textVBO = 0;
-
 
 /* Switching between windowed and fullscreen */
 constexpr float DEFAULT_WINDOW_WIDTH = 800.0f, DEFAULT_WINDOW_HEIGHT = 600.0f;
@@ -193,29 +189,19 @@ void setupCubeGeometry() {
     glBindVertexArray(0);
 }
 
-
-
-void drawCube(const btTransform &trans, const btVector3 &halfExtents,
-              const glm::mat4& view, const glm::mat4& projection)
-{
+void drawCube(const btTransform &trans, const btVector3 &halfExtents) {
     btScalar mat[16];
     trans.getOpenGLMatrix(mat);
-
     glm::mat4 model = glm::make_mat4(mat);
-    model = glm::scale(model,
-        glm::vec3(halfExtents.x(), halfExtents.y(), halfExtents.z()) * 2.0f);
+    model = glm::scale(model, glm::vec3(halfExtents.x() * 2, halfExtents.y() * 2, halfExtents.z() * 2));
 
     simpleShader->use();
     simpleShader->setUniform("M", model);
-    simpleShader->setUniform("V", view);
-    simpleShader->setUniform("P", projection);
-    simpleShader->setUniform("color", glm::vec3(1, 0, 0));
-
+    simpleShader->setUniform("color", glm::vec3(0.0f, 0.0f, 1.0f));
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36); // see next section
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 24);
     glBindVertexArray(0);
 }
-
 
 void drawWaypoint(const glm::vec3 &position, const Shader *shader) {
     constexpr auto halfExtents = glm::vec3(0.5, 0.5, 0.5);
@@ -289,42 +275,27 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, cons
     wheelModel->Draw(*shader);
 }
 
-
 bool worldToScreen(
     const glm::vec3& worldPos,
     const glm::mat4& view,
     const glm::mat4& projection,
-    float screenWidth,
-    float screenHeight,
-    ImVec2& out)
-{
-    glm::vec4 clip = projection * view * glm::vec4(worldPos, 1.0f);
+    const float screenWidth,
+    const float screenHeight,
+    ImVec2 &out) {
+    const glm::vec4 clip = projection * view * glm::vec4(worldPos, 1.0f);
 
     if (clip.w <= 0.0f)
         return false; // behind camera
 
-    glm::vec3 ndc = glm::vec3(clip) / clip.w;
+    const glm::vec3 ndc = glm::vec3(clip) / clip.w;
 
     out.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
     out.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
 
     return true;
 }
-void exampleDrawText() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
 
-    ImGui::Begin("Debug");
-    ImGui::Text("POZDRAWIAM J.K.");
-    ImGui::End();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void drawScene(GLFWwindow *window, TCPClient *client) {
-
+void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -339,7 +310,6 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
 
     glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
     const auto chassisOrigin = playerVehicle->getBtVehicle()->getChassisWorldTransform().getOrigin();
     const auto vehPos = new glm::vec3();
@@ -364,6 +334,7 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
     const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
                                                   0.1f, 1000.0f);
     const glm::mat4 view = camera.GetViewMatrix();
+
     Skybox::draw(view, projection);
 
     std::vector<glm::vec3> brakeLightPositions;
@@ -372,8 +343,9 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
     /* Limit for the shader */
     constexpr int brakeLightLimit = 8;
 
+    ImDrawList *drawList = ImGui::GetForegroundDrawList();
+
     // Draw chassis
-    ImDrawList* drawList = ImGui::GetForegroundDrawList();
     for (const auto &vehicle: VehicleManager::getInstance().getVehicles()) {
         const auto config = vehicle->getConfig();
         // const auto chassisTrans = vehicle->getBtVehicle()->getChassisWorldTransform();
@@ -417,7 +389,7 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
 
-        const glm::vec3 vehicleWorldPos = glm::vec3(vehicle->getOpenGLModelMatrix()[3]);
+        const auto vehicleWorldPos = glm::vec3(vehicle->getOpenGLModelMatrix()[3]);
 
         // offset above roof
         glm::vec3 nickPos = vehicleWorldPos + glm::vec3(0.0f, 1.5f, 0.0f);
@@ -426,7 +398,7 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
         if (worldToScreen(nickPos, view, projection, currentWindowWidth, currentWindowHeight, screenPos)) {
             const std::string& nick =
                 config.isPlayerVehicle
-                    ? client->getPlayerNickname()
+                    ? tcpClient->getPlayerNickname()
                     : config.nickname;
 
             float distance = glm::distance(camera.getPosition(), nickPos);
@@ -476,17 +448,15 @@ void drawScene(GLFWwindow *window, TCPClient *client) {
     if (debugDrawer->isEnabled())
         debugDrawer->draw(projection * view * model);
 
-
-
     // simpleShader->use();
     // simpleShader->setUniform("V", view);
     // simpleShader->setUniform("P", projection);
     // for (const auto &waypoint: opponent->waypoints) {
     //     drawWaypoint(waypoint, simpleShader);
     // }
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 }
 
 int main() {
@@ -516,7 +486,7 @@ int main() {
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_DEBUG, true);
 
     int flags;
@@ -577,8 +547,6 @@ int main() {
     trackShader = new Shader("track_vert.glsl", nullptr, "track_frag.glsl");
     carShader = new Shader("car_vert.glsl", nullptr, "car_frag.glsl");
 
-
-
     auto meshes = trackModel->getMeshes();
 
     std::vector<Vertex> vertices;
@@ -627,13 +595,11 @@ int main() {
     defaultConfig.rotation = gridPosition.getRotation();
 
     const auto vehicleModel = VehicleModelCache::getDefaultVehicleModel();
-    const auto aspectRatio = currentWindowWidth / currentWindowHeight;
-    const glm::mat4 projection = glm::perspective(glm::radians(camera.getZoom()), aspectRatio,
-                                                  0.1f, 1000.0f);
-    const glm::mat4 view = camera.GetViewMatrix();
+
     PlayerVehicleColor vehicleColor = tcpClient->getColor();
     defaultConfig.bodyColor=glm::vec4(vehicleColor.rNormalized(), vehicleColor.gNormalized(), vehicleColor.bNormalized(),
                                  1.0f);
+
     playerVehicle = VehicleManager::getInstance().createVehicle(defaultConfig, vehicleModel);
     playerVehicle->freeze();
 
@@ -665,8 +631,11 @@ int main() {
 
     auto &opponentManager = OpponentManager::getInstance();
     opponentManager.setOpenGLReady();
-
     tcpClient->send(TCPPacket::serialize(ClientGameLoadedPacket()), sizeof(ClientGameLoadedPacket));
+
+    auto &lapsInstance = Laps::getInstance();
+    lapsInstance.initializeTracker(physics.getDynamicsWorld());
+    lapsInstance.addLocalPlayer(playerVehicle->getBtChassis());
 
     bool didStart = false;
 
@@ -700,10 +669,9 @@ int main() {
 
         // opponent->updateSteering();
 
-        drawScene(window, tcpClient.get());
-        // drawDebugCubeNoCamera();
+        drawScene(window, tcpClient);
 
-        //exampleDrawText();
+        lapsInstance.updateLocalPlayer();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

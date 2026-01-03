@@ -24,4 +24,6 @@ struct ClientHandle {
 
     uint8_t gridPosition;
     bool gameLoaded;
+
+    uint8_t laps;
 };

@@ -15,6 +15,7 @@
 #include <atomic>
 #include <regex>
 
+#include "handlers/laps_update_handler.hpp"
 #include "handlers/name_accepted_handler.hpp"
 #include "handlers/name_taken_handler.hpp"
 #include "handlers/opponents_info_handler.hpp"
@@ -25,6 +26,7 @@
 #include "netcode/server/client_handle.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet_header.hpp"
+#include "netcode/shared/packets/tcp/client/lap_count_packet.hpp"
 #include "netcode/shared/packets/tcp/client/name_packet.hpp"
 
 static int makeNonBlocking(const int fd) {
@@ -179,6 +181,13 @@ void TCPClient::setGridPosition(const uint8_t gridPos) {
     this->gridPosition = gridPos;
 }
 
+void TCPClient::sendLapCount(const uint8_t lapCount) const {
+    auto packet = LapCountPacket();
+    packet.lapCount = lapCount;
+
+    send(TCPPacket::serialize(packet), sizeof(packet));
+}
+
 [[noreturn]]
 void TCPClient::loop(){
     epoll_event events[2];
@@ -284,6 +293,9 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
                 break;
             case TCPPacketType::RaceStartCountdown:
                 RaceStartCountdownHandler::handle(payload, size, this);
+                break;
+            case TCPPacketType::LapsUpdate:
+                LapsUpdateHandler::handle(payload, size);
                 break;
             default:
                 std::cerr << "Received packet with unknown type: " << static_cast<uint8_t>(type) << std::endl;
