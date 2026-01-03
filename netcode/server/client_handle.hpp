@@ -6,6 +6,7 @@
 #include <string>
 enum class ClientStateLobby {
     WaitingForNick,
+    WaitingInQueue,
     InLobby,
     InGame
 };

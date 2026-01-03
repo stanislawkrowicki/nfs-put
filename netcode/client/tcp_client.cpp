@@ -28,6 +28,8 @@
 #include "netcode/shared/packets/tcp/tcp_packet_header.hpp"
 #include "netcode/shared/packets/tcp/client/lap_count_packet.hpp"
 #include "netcode/shared/packets/tcp/client/name_packet.hpp"
+#include "handlers/name_accepted_but_in_queue_handler.hpp"
+#include "handlers/queue_to_lobby_handler.hpp"
 
 static int makeNonBlocking(const int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -304,6 +306,12 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
                 break;
             case TCPPacketType::LapsUpdate:
                 LapsUpdateHandler::handle(payload, size);
+                break;
+            case TCPPacketType::NameAcceptedButInQueue:
+                NameAcceptedButInQueueHandler::handle(this);
+                break;
+            case TCPPacketType::QueueToLobby:
+                QueueToLobbyHandler::handle(this);
                 break;
             default:
                 std::cerr << "Received packet with unknown type: " << static_cast<uint8_t>(type) << std::endl;
