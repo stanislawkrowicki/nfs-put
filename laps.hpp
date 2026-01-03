@@ -3,6 +3,8 @@
 #include <functional>
 #include <map>
 #include <vector>
+#include <mutex>
+#include <string>
 
 #include "lap_checkpoints.hpp"
 #include "BulletCollision/CollisionDispatch/btGhostObject.h"
@@ -15,21 +17,26 @@ struct PlayerProgress {
 
 struct LeaderboardEntry {
     uint16_t playerId;
+    std::string playerName;
     uint8_t lapCount;
     uint8_t position;
 };
 
 class Laps {
-    uint16_t LOCAL_PLAYER_ID = UINT16_MAX;
     uint8_t LEADERBOARD_SIZE = 4;
 
     btDynamicsWorld *dynamicsWorld = nullptr;
-    std::map<uint16_t, uint8_t> opponentsLaps{};
+
+    mutable std::map<uint16_t, uint8_t> opponentsLaps{};
+    mutable std::map<uint16_t, std::string> opponentsNames{};
+
+    mutable std::mutex opponentsLapsMutex{};
 
     std::vector<LeaderboardEntry> leaderboard{};
 
     PlayerProgress localPlayerProgress{};
     btRigidBody *localPlayerBody{};
+    std::string localPlayerName{};
 
     std::vector<btGhostObject *> checkpoints{};
 
@@ -46,6 +53,8 @@ class Laps {
     void updateLeaderboard();
 
 public:
+    static uint16_t LOCAL_PLAYER_ID;
+
     static Laps &getInstance() {
         static Laps instance;
         return instance;
@@ -55,11 +64,13 @@ public:
 
     void operator=(const Laps &) = delete;
 
+    void setLocalPlayerName(const std::string &playerName);
+
     void initializeTracker(btDynamicsWorld *world);
 
-    void addOpponent(uint16_t playerId);
+    void addOpponent(uint16_t playerId, const std::string &playerName);
 
-    void addLocalPlayer(btRigidBody *rigidBody);
+    void addLocalPlayer(const std::string &playerName, btRigidBody *rigidBody);
 
     void setLapIncreaseCallback(const std::function<void(int)> &fun);
 

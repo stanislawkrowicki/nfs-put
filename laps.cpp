@@ -8,6 +8,8 @@
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
+uint16_t Laps::LOCAL_PLAYER_ID = UINT16_MAX;
+
 void Laps::createCheckpoints() {
     for (const auto &checkpoint: LAP_CHECKPOINTS) {
         createCheckpoint(checkpoint);
@@ -31,27 +33,40 @@ void Laps::createCheckpoint(const LapCheckpointPosition &checkpoint) {
     checkpoints.push_back(ghost);
 }
 
+void Laps::setLocalPlayerName(const std::string &playerName) {
+    localPlayerName = playerName;
+}
+
 void Laps::initializeTracker(btDynamicsWorld *world) {
     this->dynamicsWorld = world;
-
-    opponentsLaps.clear();
 
     if (checkpoints.empty())
         createCheckpoints();
 }
 
-void Laps::addOpponent(const uint16_t playerId) {
-    if (opponentsLaps.contains(playerId)) {
-        std::cerr << "Tried to add a player to the laps system that was already added." << std::endl;
-        return;
+void Laps::addOpponent(const uint16_t playerId, const std::string &playerName) { {
+        std::lock_guard lock(opponentsLapsMutex);
+        if (opponentsLaps.contains(playerId)) {
+            std::cerr << "Tried to add a player to the laps system that was already added." << std::endl;
+            return;
+        }
+
+        opponentsLaps[playerId] = 0;
+        opponentsNames[playerId] = playerName;
     }
 
-    opponentsLaps[playerId] = 0;
+    updateLeaderboard();
 }
 
-void Laps::addLocalPlayer(btRigidBody *rigidBody) {
+void Laps::addLocalPlayer(const std::string &playerName, btRigidBody *rigidBody) {
     localPlayerBody = rigidBody;
     localPlayerProgress = PlayerProgress{0, 0};
+    localPlayerName = playerName;
+
+    // This is to force the playerName to be added  into the leaderboard
+    // TODO: We need to do it some other way. It's late, the deadline is tomorrow,
+    // pls fix
+    updateLeaderboard();
 }
 
 void Laps::setLapIncreaseCallback(const std::function<void(int)> &fun) {
@@ -75,6 +90,7 @@ void Laps::updateLocalPlayer() {
         if (localPlayerProgress.nextCheckpointIndex == checkpoints.size() - 1) {
             localPlayerProgress.lapCount++;
             updateLeaderboard();
+            onLocalPlayerLapIncrease(localPlayerProgress.lapCount);
         }
 
         localPlayerProgress.nextCheckpointIndex =
@@ -82,8 +98,10 @@ void Laps::updateLocalPlayer() {
     }
 }
 
-void Laps::setOpponentLaps(const uint16_t opponentId, const uint8_t lapsCount) {
-    opponentsLaps[opponentId] = lapsCount;
+void Laps::setOpponentLaps(const uint16_t opponentId, const uint8_t lapsCount) { {
+        std::lock_guard lock(opponentsLapsMutex);
+        opponentsLaps[opponentId] = lapsCount;
+    }
     updateLeaderboard();
 }
 
@@ -113,11 +131,16 @@ void Laps::updateLeaderboard() {
 
     const uint8_t numToRank = std::min(allPlayers.size(), static_cast<size_t>(LEADERBOARD_SIZE - 1));
     for (uint8_t i = 0; i < numToRank; ++i) {
-        if (allPlayers[i].first == LOCAL_PLAYER_ID)
+        auto name = opponentsNames[allPlayers[i].first];
+
+        if (allPlayers[i].first == LOCAL_PLAYER_ID) {
             localPlayerFoundInTop = true;
+            name = localPlayerName;
+        }
 
         result.emplace_back(LeaderboardEntry{
             allPlayers[i].first,
+            name,
             allPlayers[i].second,
             static_cast<uint8_t>(i + 1)
         });
@@ -128,6 +151,7 @@ void Laps::updateLeaderboard() {
             if (allPlayers[i].first == LOCAL_PLAYER_ID) {
                 result.emplace_back(LeaderboardEntry{
                     allPlayers[i].first,
+                    localPlayerName,
                     allPlayers[i].second,
                     static_cast<uint8_t>(i + 1)
                 });
@@ -138,11 +162,13 @@ void Laps::updateLeaderboard() {
         if (allPlayers.size() >= LEADERBOARD_SIZE)
             result.emplace_back(LeaderboardEntry{
                 allPlayers[numToRank].first,
+                opponentsNames[allPlayers[numToRank].first],
                 allPlayers[numToRank].second,
                 static_cast<uint8_t>(numToRank + 1)
             });
     }
 
+    std::lock_guard lock(opponentsLapsMutex);
     leaderboard = result;
 }
 
