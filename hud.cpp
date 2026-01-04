@@ -1,5 +1,7 @@
 #include "hud.hpp"
 #include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include "laps.hpp"
 
 void HUD::drawCurrentLap() {
@@ -17,6 +19,19 @@ void HUD::drawLeaderboard() {
         else
             ImGui::Text("%d. %s (%d laps)", position, playerName.c_str(), lapCount);
     }
+}
+
+void HUD::begin(const float currentWindowWidth, const float currentWindowHeight) {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGuiIO &io = ImGui::GetIO();
+    io.DisplaySize = ImVec2(currentWindowWidth, currentWindowHeight);
+}
+
+void HUD::render() {
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void HUD::drawLapsOverlay() {
@@ -40,6 +55,30 @@ void HUD::drawLapsOverlay() {
     }
 
     ImGui::End();
+}
+
+void HUD::drawOpponentName(const std::string &nick, const ImVec2 &screenPos, const float distance,
+                           const float currentWindowHeight) {
+    constexpr float baseFontSize = 30.0f;
+    const float resolutionScale = currentWindowHeight / 1080.0f;
+    const float fontSize = baseFontSize * resolutionScale * distance;
+
+    ImFont *font = ImGui::GetFont();
+    ImVec2 textSize = ImGui::CalcTextSize(nick.c_str());
+    const float sizeScale = fontSize / baseFontSize;
+    textSize.x *= sizeScale;
+    textSize.y *= sizeScale;
+
+    ImGui::GetForegroundDrawList()->AddText(
+        font,
+        fontSize,
+        ImVec2(
+            screenPos.x - textSize.x * 0.5f,
+            screenPos.y - textSize.y
+        ),
+        IM_COL32(255, 255, 255, 255),
+        nick.c_str()
+    );
 }
 
 void HUD::drawCountdown(const int seconds) {

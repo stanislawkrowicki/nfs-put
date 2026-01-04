@@ -357,12 +357,6 @@ void drawWheel(const btWheelInfo &wheel, Shader *shader, const int wheelID, cons
 }
 
 void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    ImGuiIO &io = ImGui::GetIO();
-    io.DisplaySize = ImVec2(currentWindowWidth, currentWindowHeight);
-
     const auto currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
@@ -371,6 +365,8 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 
     glClearColor(0.1f, 0.8f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    HUD::begin(currentWindowWidth, currentWindowHeight);
 
     const auto chassisOrigin = playerVehicle->getBtVehicle()->getChassisWorldTransform().getOrigin();
     const auto vehPos = new glm::vec3();
@@ -402,8 +398,6 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     int                    brakeLightCount = 0;
     /* Limit for the shader */
     constexpr int brakeLightLimit = 8;
-
-    ImDrawList *drawList = ImGui::GetForegroundDrawList();
 
     // Draw chassis
     for (const auto &vehicle : VehicleManager::getInstance().getVehicles()) {
@@ -451,49 +445,27 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 
         const auto vehicleWorldPos = glm::vec3(vehicle->getOpenGLModelMatrix()[3]);
 
-        glm::vec3 nickPos = vehicleWorldPos + glm::vec3(0.0f, 1.5f, 0.0f);
-
-        ImVec2 fbPos;
-        if (worldToScreenFramebuffer(
-                nickPos,
-                view,
-                projection,
-                framebufferWidth,
-                framebufferHeight,
-                fbPos))
-        {
-            ImVec2 screenPos = framebufferToImGui(fbPos);
-
-            const std::string& nick =
+        const std::string &nick =
                 config.isPlayerVehicle
                     ? tcpClient->getPlayerNickname()
                     : config.nickname;
 
+        glm::vec3 nickPos = vehicleWorldPos + glm::vec3(0.0f, 1.5f, 0.0f);
+
+        ImVec2 fbPos;
+        if (worldToScreenFramebuffer(
+            nickPos,
+            view,
+            projection,
+            framebufferWidth,
+            framebufferHeight,
+            fbPos)) {
+            ImVec2 screenPos = framebufferToImGui(fbPos);
             float distance = glm::distance(camera.getPosition(), nickPos);
-            float distanceScale = glm::clamp(10.0f / distance, 0.6f, 1.8f);
+            float distanceScaled = glm::clamp(10.0f / distance, 0.6f, 1.8f);
 
-            float baseFontSize = 30.0f;
-            float resolutionScale = currentWindowHeight / 1080.0f;
-            float fontSize = baseFontSize * resolutionScale * distanceScale;
-
-            ImFont* font = ImGui::GetFont();
-            ImVec2 textSize = ImGui::CalcTextSize(nick.c_str());
-            float sizeScale = fontSize / baseFontSize;
-            textSize.x *= sizeScale;
-            textSize.y *= sizeScale;
-
-            ImGui::GetForegroundDrawList()->AddText(
-                font,
-                fontSize,
-                ImVec2(
-                    screenPos.x - textSize.x * 0.5f,
-                    screenPos.y - textSize.y
-                ),
-                IM_COL32(255, 255, 255, 255),
-                nick.c_str()
-            );
+            HUD::drawOpponentName(nick, screenPos, distanceScaled, currentWindowHeight);
         }
-
     }
 
     trackShader->use();
@@ -535,13 +507,11 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     if (tcpClient->isRaceStartCountdownActive())
         HUD::drawCountdown(tcpClient->getTimeUntilRaceStart());
 
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    HUD::render();
 }
 
 int main() {
-
-    auto        state = std::make_shared<ClientState>();
+    auto state = std::make_shared<ClientState>();
     auto        tcpClient = std::make_shared<TCPClient>(state);
     std::thread tcpListenThread([tcpClient] { tcpClient->connect("127.0.0.1", "1313"); });
     {
