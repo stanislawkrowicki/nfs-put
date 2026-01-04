@@ -710,6 +710,8 @@ int main() {
 
             udpClient->sendVehicleState(playerVehicle, inputBitmap);
             lastTick = steady_clock::now();
+
+            opponentManager.updateInactiveOpponents();
         }
 
         processInput(window);

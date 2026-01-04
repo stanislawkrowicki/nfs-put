@@ -251,3 +251,18 @@ void Vehicle::unfreeze() const {
     body->setCollisionFlags(body->getCollisionFlags() & ~btCollisionObject::CF_KINEMATIC_OBJECT);
     body->setActivationState(ACTIVE_TAG);
 }
+
+void Vehicle::setCollisionsEnabled(const bool enabled) const {
+    dynamicsWorld->removeRigidBody(chassis);
+
+    constexpr int group = btBroadphaseProxy::DefaultFilter;
+    const int mask = enabled ? btBroadphaseProxy::AllFilter : btBroadphaseProxy::StaticFilter;
+
+    dynamicsWorld->addRigidBody(chassis, group, mask);
+
+    /* TODO: Right now it only changes the alpha of the body, not the whole vehicle */
+    if (!enabled)
+        config.bodyColor[3] = 0.5f;
+    else
+        config.bodyColor[3] = 1.0f;
+}

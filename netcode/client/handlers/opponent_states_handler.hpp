@@ -8,9 +8,15 @@ public:
     static void handle(const PacketBuffer &buf, const ssize_t size) {
         auto packet = deserializeOpponentState(buf, size);
 
+        auto &opponentManager = OpponentManager::getInstance();
+
+        if (!opponentManager.isPacketLatest(packet.header.id)) return;
+
         for (const auto [clientId, state]: packet.states) {
-            OpponentManager::getInstance().updateOpponentState(clientId, state);
+            opponentManager.updateOpponentState(clientId, state);
         }
+
+        opponentManager.setLatestPacket(packet.header.id);
     }
 };
 

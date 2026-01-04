@@ -66,5 +66,5 @@ void main()
         result *= vec3(0.3, 0.3, 0.3);
     }
 
-    FragColor = vec4(pow(result, vec3(1.0 / 1.2)), 1.0);
+    FragColor = vec4(pow(result, vec3(1.0 / 1.2)), texColor.a);
 }

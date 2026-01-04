@@ -2,6 +2,8 @@
 
 #include "opponent_manager.hpp"
 
+#include <ranges>
+
 #include "default_vehicle_model.hpp"
 #include "netcode/shared/starting_positions.hpp"
 #include "vehicle_manager.hpp"
@@ -31,6 +33,46 @@ void OpponentManager::createOpponentVehicle(uint16_t opponentId, const VehicleCo
 OpponentManager &OpponentManager::getInstance() {
     static OpponentManager instance;
     return instance;
+}
+
+bool OpponentManager::isPacketLatest(const uint32_t packetId) const {
+    if (packetId < lastReceivedPacketId) return false;
+    return true;
+}
+
+void OpponentManager::setLatestPacket(const uint32_t packetId) {
+    lastReceivedPacketId = packetId;
+}
+
+void OpponentManager::updateInactiveOpponents() {
+    const auto now = std::chrono::steady_clock::now();
+
+    for (const auto &[clientId, time]: opponentsLastPacketTimestampMap) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - time).count() > MAX_TIME_BETWEEN_PACKETS_MS)
+            setOpponentInactive(clientId);
+        else
+            setOpponentActive(clientId);
+    }
+}
+
+bool OpponentManager::isOpponentInactive(const uint16_t clientId) {
+    return std::ranges::find(inactiveOpponents, clientId) != inactiveOpponents.end();
+}
+
+void OpponentManager::setOpponentInactive(const uint16_t clientId) {
+    if (isOpponentInactive(clientId)) return;
+    if (!vehicleMap.contains(clientId)) return;
+
+    vehicleMap[clientId]->setCollisionsEnabled(false);
+    inactiveOpponents.push_back(clientId);
+}
+
+void OpponentManager::setOpponentActive(const uint16_t clientId) {
+    if (!isOpponentInactive(clientId)) return;
+    if (!vehicleMap.contains(clientId)) return;
+
+    vehicleMap[clientId]->setCollisionsEnabled(true);
+    std::erase(inactiveOpponents, clientId);
 }
 
 void OpponentManager::updateOpponentState(const uint16_t clientId, const char *state) {
@@ -70,6 +112,8 @@ void OpponentManager::updateOpponentState(const uint16_t clientId, const char *s
     btVehicle->setSteeringValue(steeringAngle, 1);
 
     inputsMap[clientId] = inputs;
+
+    opponentsLastPacketTimestampMap[clientId] = std::chrono::steady_clock::now();
 }
 
 void OpponentManager::addNewOpponent(const uint16_t &opponentId, const uint8_t gridPositionIndex,

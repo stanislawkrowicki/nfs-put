@@ -78,4 +78,6 @@ public:
     void freeze() const;
 
     void unfreeze() const;
+
+    void setCollisionsEnabled(bool enabled) const;
 };
