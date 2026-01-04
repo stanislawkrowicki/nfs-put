@@ -10,10 +10,13 @@ using namespace std::chrono;
 
 std::shared_ptr<UDPServer> Loop::server;
 std::unordered_map<uint16_t, ClientState> Loop::latestClientStates{};
+std::mutex Loop::statesMutex{};
 
 void Loop::reset() {
+    std::lock_guard lock(statesMutex);
     latestClientStates.clear();
 }
+
 void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr<ServerState>& state) {
     server = udpServer;
 
@@ -28,11 +31,16 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
             if (state->phase == MatchPhase::Finished)
                 break;
         }
-        nextTick = nextTick + tickDuration;
 
-        if (!latestClientStates.empty()) {
-            sendLatestStates();
+        nextTick = nextTick + tickDuration;
+        //
+        {
+            std::lock_guard lock(statesMutex);
+            if (!latestClientStates.empty()) {
+                sendLatestStates();
+            }
         }
+
 
         if (tickCounter % 100 == 0) {
             std::cout << std::format("Finished tick {}, time until next tick is {}", tickCounter,
@@ -46,10 +54,10 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
 }
 
 void Loop::enqueueStateUpdate(const ClientState &state) {
+    std::lock_guard lock(statesMutex);
     latestClientStates.insert_or_assign(state.clientId, state);
 }
 
-/* TODO: Make this thread safe (statesToUpdate can be updated while this function is executing) */
 void Loop::sendLatestStates() {
     constexpr int STATES_PER_PACKET = 5;
 

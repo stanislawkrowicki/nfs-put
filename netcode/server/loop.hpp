@@ -12,11 +12,11 @@ class Loop {
 
     static std::unordered_map<uint16_t, ClientState> latestClientStates;
 
+    static std::mutex statesMutex;
+
     static void sendMessageToAll();
 
     static void sendLatestStates();
-
-
 
     static OpponentStatesPacket packStatesBatch(const std::vector<ClientState> &batch);
 
