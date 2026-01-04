@@ -242,7 +242,7 @@ void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t
         clientManager->removeClient(client.tcpSocketFd);
 }
 
-void TCPServer::send(const ClientHandle &client, const PacketBuffer &data, const ssize_t size) {
+void TCPServer::send(const ClientHandle &client, const PacketBuffer &data, const ssize_t size) const {
     send(client, data.get(), size);
 }
 

@@ -36,7 +36,7 @@ public:
     //void send(ClientHandle client, const std::unique_ptr<char[]> &data, ssize_t size) const;
     //void sendToAll(const PacketBuffer &data, ssize_t size) const override;
 
-    static void send(const ClientHandle &client, const PacketBuffer &data, ssize_t size);
+    void send(const ClientHandle &client, const PacketBuffer &data, ssize_t size) const;
 
     void sendToAll(const PacketBuffer &data, ssize_t size) const;
 

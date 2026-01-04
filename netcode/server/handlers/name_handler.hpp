@@ -23,7 +23,7 @@ public:
                 return;
 
         if (server->clientManager->nameTaken(nickname, client.id)) {
-            sendNameTaken(client);
+            sendNameTaken(client, server);
             return;
         }
 
@@ -37,9 +37,9 @@ public:
         }
     }
 
-    static void sendNameTaken(const ClientHandle & client) {
+    static void sendNameTaken(const ClientHandle &client, const TCPServer *server) {
         constexpr auto response = NameTakenPacket();
-        TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+        server->send(client, TCPPacket::serialize(response), sizeof(response));
     }
 
     static void sendNameAcceptedPacket(const std::string &nickname, ClientHandle &client, TCPServer *server) {
@@ -53,11 +53,11 @@ public:
                 }
             }
             constexpr auto response = NameAcceptedPacket();
-            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+            server->send(client, TCPPacket::serialize(response), sizeof(response));
         }else {
             ClientManager::ToQueue(nickname,client);
             constexpr auto response = NameAcceptedButInQueuePacket();
-            TCPServer::send(client, TCPPacket::serialize(response), sizeof(response));
+            server->send(client, TCPPacket::serialize(response), sizeof(response));
         }
     }
 
@@ -92,7 +92,7 @@ public:
             std::memcpy(listBuf.get(), &lobbyList.header, sizeof(TCPPacketHeader));
             std::memcpy(listBuf.get() + sizeof(TCPPacketHeader), lobbyList.payload.get(), lobbyList.header.payloadSize);
 
-            TCPServer::send(client, listBuf.get(), totalSize);
+            server->send(client, listBuf.get(), totalSize);
         }
     }
 };
