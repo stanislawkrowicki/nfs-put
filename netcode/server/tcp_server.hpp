@@ -27,7 +27,11 @@ public:
     std::shared_ptr<ServerState> state;
 
 
-    void listen(const char *port);
+    void listen(const char *port) const;
+
+    void stopListening();
+
+    void loop();
 
     //void addMessageListener(std::function<void(const Packet &)>) override;
 
@@ -73,8 +77,13 @@ public:
 
     void broadcastLapsUpdate(const ClientHandle &updatedClient) const;
 
+    void cleanLobbyTimerThread();
+
 private:
     int socketFd;
+
+    // Used to wake up the process from the epoll
+    int wakeFd{-1};
 
     const int lobbyEndTimeout{TIME_TO_LAUNCH};
     std::chrono::steady_clock::time_point lobbyStartTime;
@@ -86,7 +95,10 @@ private:
 
     const int raceStartTimeout{10};
 
-    [[noreturn]] void loop();
+    std::atomic<bool> runLobbyTimer{false};
+
+    std::thread lobbyTimerThread{};
+    std::atomic<bool> shouldListen;
 
     void addFromQueue();
 };

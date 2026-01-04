@@ -11,6 +11,7 @@
 #include <thread>
 #include <condition_variable>
 #include <ranges>
+#include <sys/eventfd.h>
 
 #include "../shared/packets/tcp/server/provide_name_packet.hpp"
 #include "../shared/packets/tcp/server/start_game_packet.hpp"
@@ -135,8 +136,11 @@ int TCPServer::timeUntilStart() const {
 }
 
 void TCPServer::countdownToLobbyEnd(){
-    std::thread([this]() {
-        while (true) {
+    cleanLobbyTimerThread();
+    runLobbyTimer = true;
+
+    lobbyTimerThread = std::thread([this]() {
+        while (runLobbyTimer) {
             {
                 std::lock_guard<std::mutex> lock(state->mtx);
                 if (state->phase == MatchPhase::Finished) {
@@ -180,12 +184,10 @@ void TCPServer::countdownToLobbyEnd(){
                     sendClientOpponentsInfo(client);
                 }
 
-                break;
+                runLobbyTimer = false;
             }
-
-            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
-    }).detach();
+    });
 }
 
 void TCPServer::startRaceStartCountdown() const {
@@ -204,25 +206,54 @@ void TCPServer::broadcastLapsUpdate(const ClientHandle &updatedClient) const {
     sendToAllExcept(TCPPacket::serialize(packet), sizeof(packet), updatedClient);
 }
 
-void TCPServer::listen(const char *port) {
+void TCPServer::cleanLobbyTimerThread() {
+    runLobbyTimer = false;
+    if (lobbyTimerThread.joinable())
+        lobbyTimerThread.join();
+}
+
+void TCPServer::listen(const char *port) const {
     addrinfo *res, hints{};
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_INET;
     hints.ai_flags = AI_PASSIVE;
 
-    if (const int rv = getaddrinfo(nullptr, port, &hints, &res))
+    if (const int rv = getaddrinfo(nullptr, port, &hints, &res)) {
+        freeaddrinfo(res);
         throw std::runtime_error(std::string("TcpBSDServer getaddrinfo failed: ") + gai_strerror(rv));
+    }
 
-    if (::bind(socketFd, res->ai_addr, res->ai_addrlen))
+    if (::bind(socketFd, res->ai_addr, res->ai_addrlen)) {
+        freeaddrinfo(res);
         throw std::runtime_error(std::string("TcpBSDServer bind failed: ") + strerror(errno));
+    }
 
-    if (::listen(socketFd, SOMAXCONN))
+    if (::listen(socketFd, SOMAXCONN)) {
+        freeaddrinfo(res);
         throw std::runtime_error(std::string("TcpBSDServer listen failed: ") + strerror(errno));
+    }
+
     freeaddrinfo(res);
-    //countdownToLobbyEnd();
-    loop();
 }
 
+void TCPServer::stopListening() {
+    shouldListen = false;
+
+    const auto clients = clientManager->getAllClients();
+
+    for (const auto &client: clients | std::views::values) {
+        shutdown(client.tcpSocketFd, SHUT_RDWR);
+        close(client.tcpSocketFd);
+    }
+
+    if (wakeFd != -1) {
+        constexpr uint64_t u = 1;
+        write(wakeFd, &u, sizeof(uint64_t));
+    }
+
+    shutdown(socketFd, SHUT_RDWR);
+    close(socketFd);
+}
 
 void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t size) const {
     if (!client.connected) {
@@ -230,7 +261,12 @@ void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t
         return;
     }
 
-    const ssize_t bytesSent = ::send(client.tcpSocketFd, data, size, 0);
+    const ssize_t bytesSent = ::send(client.tcpSocketFd, data, size, MSG_NOSIGNAL);
+
+    if (bytesSent <= 0 && errno == EPIPE) {
+        /* If we are stopping the server then this might happen, do nothing */
+        if (!shouldListen) return;
+    }
 
     if (bytesSent <= 0 && errno != EWOULDBLOCK && errno != EAGAIN)
         throw std::runtime_error(std::string("Failed to send TCP message: ") + strerror(errno));
@@ -341,6 +377,11 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
 }
 
 void TCPServer::notifyClientDisconnected(const ClientHandle &client) const {
+    if (!shouldListen) {
+        // The server is shutting down, don't send packets because sockets are already closed */
+        return;
+    }
+
     const auto [packet,packetSize] = TCPPacket::create<ClientDisconnectedPacket>(
         client.nick.c_str(), client.nick.size());
     const auto buf = TCPPacket::serialize(packet);
@@ -372,7 +413,6 @@ void TCPServer::sendClientOpponentsInfo(const ClientHandle &client) const {
     send(client, TCPPacket::serialize(packet), packetSize);
 }
 
-[[noreturn]]
 void TCPServer::loop() {
     int efd = epoll_create1(0);
     if (efd < 0)
@@ -381,9 +421,19 @@ void TCPServer::loop() {
     ev.events = EPOLLIN;
     ev.data.fd = socketFd;
     epoll_ctl(efd, EPOLL_CTL_ADD, socketFd, &ev);
-    std::cout << "waiting for clients...\n";
+
+    this->wakeFd = eventfd(0, EFD_NONBLOCK);
+    epoll_event wakeEv{};
+    wakeEv.events = EPOLLIN;
+    wakeEv.data.fd = wakeFd;
+    epoll_ctl(efd, EPOLL_CTL_ADD, wakeFd, &wakeEv);
+
     epoll_event events[64];
-    while (true) {
+    shouldListen = true;
+
+    std::cout << "waiting for clients...\n";
+
+    while (shouldListen) {
         int n = epoll_wait(efd, events, 64, -1);
         if (n < 0)
             throw std::runtime_error(std::string("epoll_wait failed: ") + strerror(errno));
@@ -409,6 +459,11 @@ void TCPServer::loop() {
                     std::cout << "\nAccepted client fd=" << cfd << "\n";
                 }
                 continue;
+            }
+            if (fd == wakeFd) {
+                shouldListen = false;
+                close(wakeFd);
+                break;
             }
             if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 auto client = clientManager->getClientByFd(fd);

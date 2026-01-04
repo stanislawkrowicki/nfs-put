@@ -10,7 +10,11 @@ public:
 
     ~UDPServer();
 
-    void listen(const char *port);
+    void bind(const char *port) const;
+
+    void loop();
+
+    void stopListening();
 
     void send(ClientHandle client, const PacketBuffer &data, ssize_t size) const;
 
@@ -36,5 +40,5 @@ private:
 
     std::shared_ptr<ClientManager> clientManager;
 
-    [[noreturn]] void loop();
+    std::atomic<bool> shouldListen{false};
 };

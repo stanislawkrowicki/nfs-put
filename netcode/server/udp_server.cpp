@@ -29,7 +29,7 @@ UDPServer::~UDPServer() {
         close(socketFd);
 }
 
-void UDPServer::listen(const char *port) {
+void UDPServer::bind(const char *port) const {
     addrinfo *res, hints{};
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_family = AF_INET;
@@ -41,7 +41,13 @@ void UDPServer::listen(const char *port) {
     if (::bind(socketFd, res->ai_addr, res->ai_addrlen))
         throw std::runtime_error(std::string("UdpBSDServer bind failed: ") + strerror(errno));
 
-    loop();
+    freeaddrinfo(res);
+}
+
+void UDPServer::stopListening() {
+    shouldListen = false;
+    shutdown(socketFd, SHUT_RDWR);
+    close(socketFd);
 }
 
 void UDPServer::send(const ClientHandle client, const PacketBuffer &data, const ssize_t size) const {
@@ -76,9 +82,10 @@ void UDPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
     sendToAllExcept(data, size, *client);
 }
 
-[[noreturn]]
 void UDPServer::loop() {
-    while (true) {
+    shouldListen = true;
+
+    while (shouldListen) {
         auto buf = std::make_unique<char[]>(MAX_PACKET_SIZE);
 
         sockaddr_in sender = {};
@@ -91,6 +98,9 @@ void UDPServer::loop() {
             perror("recvfrom");
             continue;
         }
+
+        // shutdown
+        if (bytesRead == 0) break;
 
         if (const auto client = clientManager->getClient(sender)) {
             handlePacket(std::move(buf), bytesRead, *client);

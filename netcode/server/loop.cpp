@@ -11,6 +11,7 @@ using namespace std::chrono;
 std::shared_ptr<UDPServer> Loop::server;
 std::unordered_map<uint16_t, ClientState> Loop::latestClientStates{};
 std::mutex Loop::statesMutex{};
+std::atomic<bool> Loop::shouldRun{false};
 
 void Loop::reset() {
     std::lock_guard lock(statesMutex);
@@ -23,7 +24,9 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
     const auto tickDuration = milliseconds(1000 / TICK_RATE);
     int tickCounter = 0;
     auto nextTick = steady_clock::now();
-    while (true) {
+
+    shouldRun = true;
+    while (shouldRun) {
         //
         {
             std::lock_guard lock(state->mtx);
@@ -49,6 +52,10 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
         tickCounter++;
         std::this_thread::sleep_until(nextTick);
     }
+}
+
+void Loop::stop() {
+    shouldRun = false;
 }
 
 void Loop::enqueueStateUpdate(const ClientState &state) {

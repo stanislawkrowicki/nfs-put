@@ -14,6 +14,8 @@ class Loop {
 
     static std::mutex statesMutex;
 
+    static std::atomic<bool> shouldRun;
+
     static void sendMessageToAll();
 
     static void sendLatestStates();
@@ -22,6 +24,9 @@ class Loop {
 
 public:
     static void run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr<ServerState>& state);
+
+    static void stop();
+
     static void reset();
     static void enqueueStateUpdate(const ClientState &state);
 };
