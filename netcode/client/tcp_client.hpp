@@ -58,6 +58,12 @@ public:
 
     void setUdpBridge(const std::shared_ptr<UDPClient> &udpClient);
 
+    void setRaceEndSeconds(uint8_t seconds);
+
+    bool isRaceEndCountdownActive() const;
+
+    int getRaceEndSeconds() const;
+
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
@@ -71,6 +77,8 @@ private:
 
     mutable std::thread countdownThread;         // background countdown thread
     mutable std::string lastLobbyMessage; // latest lobby + countdown from server
+
+    std::atomic<int> raceEndSeconds{ -1 };
 
     uint8_t gridPosition;
     PlayerVehicleColor vehicleColor;

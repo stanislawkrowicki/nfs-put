@@ -11,6 +11,8 @@
 #define MAX_PACKET_SIZE 1024
 #define MAX_LOBBY_SIZE 8
 #define TIME_TO_LAUNCH 20
+#define RACE_END_TIMEOUT 30
+#define LAPS_IN_RACE 3
 
 class TCPServer final {
 public:
@@ -18,8 +20,12 @@ public:
 
     ~TCPServer();
 
+    std::atomic<bool> raceEndCountdownActive{false};
+    std::chrono::steady_clock::time_point raceEndStartTime;
+
     std::shared_ptr<ClientManager> clientManager;
     std::shared_ptr<ServerState> state;
+
 
     void listen(const char *port);
 

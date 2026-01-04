@@ -164,6 +164,7 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/packets/udp/client/handshake_packet.hpp
         netcode/shared/packets/tcp/server/handshake_ack_packet.hpp
         netcode/client/handlers/handshake_ack_handler.hpp
+        netcode/client/handlers/race_end_countdown_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)
