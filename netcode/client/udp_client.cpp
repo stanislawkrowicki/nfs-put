@@ -30,7 +30,6 @@ UDPClient::UDPClient(const char *host, const char *port) {
             continue;
 
         if (connect(socketFd, result->ai_addr, result->ai_addrlen) == 0) {
-            std::cout << "Connected to the server!" << std::endl;
             connectedSuccessfully = true;
             break;
         }
@@ -139,7 +138,7 @@ void UDPClient::close() {
     socketFd = -1;
 }
 
-void UDPClient::performHandshake(const uint16_t clientId) {
+bool UDPClient::performHandshake(const uint16_t clientId) {
     char payload[2];
     std::memcpy(payload, &clientId, sizeof(clientId));
 
@@ -158,9 +157,10 @@ void UDPClient::performHandshake(const uint16_t clientId) {
         if (handshakeAttempts > MAX_HANDSHAKE_ATTEMPTS) {
             std::cerr << "Failed to perform handshake." << std::endl;
             this->waitForMessages = false;
-            return;
+            return false;
         }
     }
+ return true;
 }
 
 void UDPClient::setHandshakeSuccessful() {

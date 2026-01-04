@@ -26,13 +26,16 @@ public:
 
     std::string getPlayerNickname() const;
 
-    void displayLobby() const;
+    void connect(const char *host, const char *port);
 
-    void connect(const char* host, const char* port);
+    [[noreturn]]
+    void listen();
 
     void send(const char *data, size_t size) const;
 
     void send(const PacketBuffer &buf, size_t size) const;
+
+    void displayLobby();
 
     void setId(uint16_t id);
 
@@ -86,9 +89,6 @@ private:
 
     std::chrono::time_point<std::chrono::steady_clock> raceStartTime;
     bool countdownUntilStart{false};
-
-    [[noreturn]]
-    void loop();
 
     void receivePacket();
 

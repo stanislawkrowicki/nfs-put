@@ -85,14 +85,18 @@ void TCPClient::connect(const char* host, const char* port) {
 
     int rv = getaddrinfo(host, port, &hints, &res);
     if (rv != 0)
-        throw std::runtime_error(gai_strerror(rv));
+        throw std::runtime_error(
+            "Failed to find server. Did you provide the good address? " + std::string(gai_strerror(rv)));
 
     socketFd = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (socketFd < 0)
-        throw std::runtime_error(strerror(errno));
+    if (socketFd < 0) {
+        freeaddrinfo(res);
+        throw std::runtime_error("System error: " + std::string(strerror(errno)));
+    }
 
     if (::connect(socketFd, res->ai_addr, res->ai_addrlen) < 0) {
-        throw std::runtime_error(strerror(errno));
+        freeaddrinfo(res);
+        throw std::runtime_error("Failed to connect to the server: " + std::string(strerror(errno)));
     }
 
     freeaddrinfo(res);
@@ -113,26 +117,6 @@ void TCPClient::connect(const char* host, const char* port) {
     epoll_ctl(epollFd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
 
     std::cout << "Connected to server\n";
-
-    // Start countdown display thread
-    localTimeLeft = 0;
-    countdownThread = std::thread([this]() {
-    while (true) {
-        int time = localTimeLeft.load();
-        if (time >= 0) {
-            refreshScreen();
-            localTimeLeft = time - 1;
-
-        }
-        if (raceEndSeconds.load() >= 0)
-            raceEndSeconds--;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-});
-
-    countdownThread.detach();
-
-    loop();
 }
 
 void TCPClient::send(const char *data, const size_t size) const {
@@ -145,6 +129,24 @@ void TCPClient::send(const char *data, const size_t size) const {
 
 void TCPClient::send(const PacketBuffer &buf, const size_t size) const {
     send(buf.get(), size);
+}
+
+void TCPClient::displayLobby() {
+    localTimeLeft = 0;
+    countdownThread = std::thread([this]() {
+        while (true) {
+            int time = localTimeLeft.load();
+            if (time >= 0) {
+                refreshScreen();
+                localTimeLeft = time - 1;
+            }
+            if (raceEndSeconds.load() >= 0)
+                raceEndSeconds--;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    });
+
+    countdownThread.detach();
 }
 
 void TCPClient::setId(const uint16_t id) {
@@ -218,7 +220,7 @@ void TCPClient::setUdpBridge(const std::shared_ptr<UDPClient> &udpClient) {
 }
 
 [[noreturn]]
-void TCPClient::loop(){
+void TCPClient::listen() {
     epoll_event events[2];
 
     while (true) {
@@ -228,7 +230,7 @@ void TCPClient::loop(){
 
         for (int i = 0; i < n; ++i) {
             if (events[i].events & (EPOLLHUP | EPOLLRDHUP | EPOLLERR)) {
-                std::cout << "Disconnected from server\n";
+                std::cout << "Server closed." << std::endl;
                 exit(0);
             }
 

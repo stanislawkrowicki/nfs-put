@@ -522,7 +522,16 @@ int main() {
 
     auto state = std::make_shared<ClientState>();
     auto        tcpClient = std::make_shared<TCPClient>(state);
-    std::thread tcpListenThread([tcpClient, host, port] { tcpClient->connect(host.c_str(), port.c_str()); }); {
+    try {
+        tcpClient->connect(host.c_str(), port.c_str());
+    } catch (const std::runtime_error &e) {
+        std::cerr << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    tcpClient->displayLobby();
+
+    std::thread tcpListenThread([tcpClient] { tcpClient->listen(); }); {
         std::unique_lock<std::mutex> lock(state->mtx);
         state->cv.wait(lock, [&] { return state->ready; });
     }
@@ -659,7 +668,10 @@ int main() {
     });
 
     const uint16_t clientId = tcpClient->getId();
-    udpClient->performHandshake(clientId);
+    if (!udpClient->performHandshake(clientId)) {
+        std::cerr << "Failed to perform handshake with the server." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     // const VehicleConfig opponentConfig;
     // opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);

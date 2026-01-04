@@ -37,7 +37,7 @@ public:
 
     void close();
 
-    void performHandshake(uint16_t clientId);
+    bool performHandshake(uint16_t clientId);
 
     void setHandshakeSuccessful();
 
