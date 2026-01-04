@@ -167,11 +167,11 @@ void TCPServer::countdownToLobbyEnd(){
                 for (auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
                     client.state = ClientStateLobby::InGame;
-                    // auto packet = StartGamePacket();
-                    // packet.gridPosition = client.gridPosition;
-                    // packet.vehicleColor = client.vehicleColor;
-                    // const auto serialized = TCPPacket::serialize(packet);
-                    // send(client, serialized, sizeof(packet));
+                    auto packet = StartGamePacket();
+                    packet.gridPosition = client.gridPosition;
+                    packet.vehicleColor = client.vehicleColor;
+                    const auto serialized = TCPPacket::serialize(packet);
+                    send(client, serialized, sizeof(packet));
                 }
 
                 for (auto &client: clients | std::views::values) {

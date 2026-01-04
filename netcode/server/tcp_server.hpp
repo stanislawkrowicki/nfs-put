@@ -9,7 +9,7 @@
 
 
 #define MAX_PACKET_SIZE 1024
-#define MAX_LOBBY_SIZE 2
+#define MAX_LOBBY_SIZE 8
 #define TIME_TO_LAUNCH 20
 
 class TCPServer final {

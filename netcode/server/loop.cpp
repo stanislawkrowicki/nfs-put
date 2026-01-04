@@ -20,7 +20,6 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
     const auto tickDuration = milliseconds(1000 / TICK_RATE);
     int tickCounter = 0;
     auto nextTick = steady_clock::now();
-    auto matchStart = steady_clock::now();
     while (true) {
 
         {
@@ -29,10 +28,7 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
                 break;
         }
         nextTick = nextTick + tickDuration;
-        if (steady_clock::now() - matchStart > seconds(5)) {
-            state->endMatch();
-            continue;
-        }
+
         if (!latestClientStates.empty()) {
             sendLatestStates();
         }
