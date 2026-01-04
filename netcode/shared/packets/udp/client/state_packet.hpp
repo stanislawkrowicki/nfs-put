@@ -1,10 +1,8 @@
 #pragma once
 #include <cstdint>
-#include <iostream>
 
 #include "../udp_packet_header.hpp"
 #include "../udp_packet.hpp"
-#include "LinearMath/btTransform.h"
 
 constexpr int STATE_PAYLOAD_SIZE = 81;
 

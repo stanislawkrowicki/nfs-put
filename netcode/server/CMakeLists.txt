@@ -50,7 +50,3 @@ add_executable(server
         ../shared/packets/tcp/client/lap_count_packet.hpp
         handlers/lap_count_handler.hpp
         ../shared/packets/tcp/server/laps_update_packet.hpp)
-
-target_link_libraries(server PRIVATE LinearMath)
-
-target_include_directories(server PRIVATE ${bullet_SOURCE_DIR}/src)

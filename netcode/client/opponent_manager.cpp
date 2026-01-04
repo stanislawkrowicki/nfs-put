@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "opponent_manager.hpp"
 
 #include "default_vehicle_model.hpp"
