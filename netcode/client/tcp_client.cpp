@@ -242,12 +242,13 @@ void TCPClient::receivePacket(){
 
 
 void TCPClient::handleUserInput() const {
-    char buf[32];
-    const ssize_t bytes = read(STDIN_FILENO, buf, sizeof(buf));
+    std::string nick;
+    if (!std::getline(std::cin, nick)) return;
 
-    if (bytes <= 0) return;
+    if (nick.length() > 32)
+        nick = nick.substr(0, 32);
 
-    std::string nick(buf, strnlen(buf, bytes));
+    if (nick.empty()) return;
 
     std::erase(nick, '\n');
     std::erase(nick, '\r');
