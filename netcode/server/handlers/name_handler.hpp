@@ -30,10 +30,11 @@ public:
         sendNameAcceptedPacket(nickname,client,server);
 
         std::cout << "\nClient fd=" << client.tcpSocketFd << " set nick: " << nickname << "\n";
-
-        sendClientConnectedPacket(client, server);
-        sendTimeUntilStartPacket(server);
-        sendClientList(client,server);
+        if (client.state == ClientStateLobby::InLobby) {
+            sendClientConnectedPacket(client, server);
+            sendTimeUntilStartPacket(server);
+            sendClientList(client,server);
+        }
     }
 
     static void sendNameTaken(const ClientHandle & client) {

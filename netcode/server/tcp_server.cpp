@@ -75,15 +75,14 @@ void TCPServer::assignColors(){
 }
 void TCPServer::addFromQueue() {
     auto& clients = clientManager->getAllClients();
-
-    // Count current lobby players
+    // // Count current lobby players
+    // size_t lobbyCount = 0;
+    // for (const auto& client : clients | std::views::values) {
+    //     if (client.connected && client.state == ClientStateLobby::InLobby) {
+    //         ++lobbyCount;
+    //     }
+    // }
     size_t lobbyCount = 0;
-    for (const auto& client : clients | std::views::values) {
-        if (client.connected && client.state == ClientStateLobby::InLobby) {
-            ++lobbyCount;
-        }
-    }
-
     // Fill lobby from queue
     for (auto& client : clients | std::views::values) {
         if (lobbyCount >= MAX_LOBBY_SIZE)
@@ -100,10 +99,10 @@ void TCPServer::addFromQueue() {
             constexpr auto response = QueueToLobbyPacket();
             send(client, TCPPacket::serialize(response), sizeof(response));
 
-            // Optional: notify client they entered the lobby
-            TimeUntilStartPacket packet{};
-            packet.seconds = timeUntilStart();
-            send(client, TCPPacket::serialize(packet), sizeof(packet));
+            NameHandler::sendClientConnectedPacket(client, this);
+            NameHandler::sendTimeUntilStartPacket(this);
+            NameHandler::sendClientList(client,this);
+
         }
     }
 }
