@@ -444,24 +444,3 @@ void TCPServer::loop() {
         }
     }
 }
-
-void TCPServer::broadcastPlayers() const {
-    const auto &clients = clientManager->getAllClients();
-    size_t connectedCount = 0;
-    for (const auto &[id, client]: clients) {
-        if (client.connected && client.state == ClientStateLobby::InLobby)
-            ++connectedCount;
-    }
-    std::string lobbyMessage = "Player Count (" + std::to_string(connectedCount) + "):\n";
-
-    int index = 1;
-    for (const auto &[id, client]: clients) {
-        if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
-        lobbyMessage += std::to_string(index++) + ". " + client.nick + "\n";
-    }
-    lobbyMessage += "Race starts in: " + std::to_string(timeUntilStart()) + "s\n";
-    for (const auto &[id, client]: clients) {
-        if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
-        send(client, lobbyMessage.c_str(), lobbyMessage.size());
-    }
-}

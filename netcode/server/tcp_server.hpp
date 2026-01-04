@@ -82,6 +82,5 @@ private:
 
     [[noreturn]] void loop();
 
-    void broadcastPlayers() const;
     void addFromQueue();
 };
