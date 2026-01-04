@@ -6,5 +6,7 @@ class HUD {
     static void drawLeaderboard();
 
 public:
-    static void draw();
+    static void drawCountdown(int seconds);
+
+    static void drawLapsOverlay();
 };

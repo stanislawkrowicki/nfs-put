@@ -530,7 +530,10 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     //     drawWaypoint(waypoint, simpleShader);
     // }
 
-    HUD::draw();
+    HUD::drawLapsOverlay();
+
+    if (tcpClient->isRaceStartCountdownActive())
+        HUD::drawCountdown(tcpClient->getTimeUntilRaceStart());
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

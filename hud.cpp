@@ -19,7 +19,7 @@ void HUD::drawLeaderboard() {
     }
 }
 
-void HUD::draw() {
+void HUD::drawLapsOverlay() {
     constexpr float margin = 20.0f;
 
     ImGui::SetNextWindowPos(ImVec2(margin, margin), ImGuiCond_Always);
@@ -32,12 +32,38 @@ void HUD::draw() {
                                              ImGuiWindowFlags_NoMove;
     ImGui::SetNextWindowBgAlpha(0.0f);
 
-    if (ImGui::Begin("HUD_Overlay", nullptr, windowFlags)) {
+    if (ImGui::Begin("LAPS_Overlay", nullptr, windowFlags)) {
         ImGui::SetWindowFontScale(1.5);
         drawCurrentLap();
         ImGui::Separator();
         drawLeaderboard();
     }
 
+    ImGui::End();
+}
+
+void HUD::drawCountdown(const int seconds) {
+    if (seconds <= 0) return;
+
+    const auto screenSize = ImGui::GetIO().DisplaySize;
+    const auto center = ImVec2(screenSize.x * 0.5f, screenSize.y * 0.5f);
+
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+    constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+                                       ImGuiWindowFlags_NoSavedSettings |
+                                       ImGuiWindowFlags_NoInputs |
+                                       ImGuiWindowFlags_NoBackground;
+
+    if (ImGui::Begin("COUNTDOWN_Overlay", nullptr, flags)) {
+        const float pulse = 1.0f + (sin(ImGui::GetTime() * 10.0f) * 0.1f);
+        ImGui::SetWindowFontScale(10.0f * pulse);
+
+        if (seconds == 1) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%d", seconds);
+        } else {
+            ImGui::Text("%d", seconds);
+        }
+    }
     ImGui::End();
 }
