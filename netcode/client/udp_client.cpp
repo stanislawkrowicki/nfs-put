@@ -10,15 +10,15 @@
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/shared/packets/udp/client/ping_packet.hpp"
 
-UDPClient::UDPClient() {
+UDPClient::UDPClient(const char *host, const char *port) {
     addrinfo hints{};
     addrinfo *result{};
 
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
 
-    const int status = getaddrinfo(SERVER_IP, SERVER_PORT, &hints, &result);
+    const int status = getaddrinfo(host, port, &hints, &result);
     if (status != 0)
         throw std::runtime_error(std::format("getaddrinfo failed: {}", gai_strerror(status)));
 
@@ -40,8 +40,8 @@ UDPClient::UDPClient() {
 
     if (!connectedSuccessfully) {
         close();
-        throw std::runtime_error(std::format("Failed to connect to the server with IP {} and port {}.", SERVER_IP,
-                                             SERVER_PORT));
+        throw std::runtime_error(std::format("Failed to connect to the server with IP {} and port {}.", host,
+                                             port));
     }
 }
 

@@ -511,14 +511,21 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
 }
 
 int main() {
+    std::string host, port;
+
+    std::cout << "Provide server address or domain: (eg. 127.0.0.1): " << std::flush;
+    std::getline(std::cin, host);
+
+    std::cout << "Provide server port (eg. 5000): " << std::flush;
+    std::getline(std::cin, port);
+
     auto state = std::make_shared<ClientState>();
     auto        tcpClient = std::make_shared<TCPClient>(state);
-    std::thread tcpListenThread([tcpClient] { tcpClient->connect("127.0.0.1", "1313"); });
-    {
+    std::thread tcpListenThread([tcpClient, host, port] { tcpClient->connect(host.c_str(), port.c_str()); }); {
         std::unique_lock<std::mutex> lock(state->mtx);
         state->cv.wait(lock, [&] { return state->ready; });
     }
-    const auto udpClient = std::make_shared<UDPClient>();
+    const auto udpClient = std::make_shared<UDPClient>(host.c_str(), port.c_str());
 
     auto udpPort = udpClient->getPort();
     auto udpInfoPacket = UdpInfoPacket();

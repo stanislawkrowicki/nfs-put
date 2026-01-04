@@ -1,7 +1,5 @@
 #pragma once
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT "1313"
 #include "vehicle.hpp"
 #include "../shared/packets/udp/udp_packet.hpp"
 #include "LinearMath/btTransform.h"
@@ -15,7 +13,7 @@ class UDPClient {
     volatile bool waitForMessages = false;
 
 public:
-    explicit UDPClient();
+    UDPClient(const char *host, const char *port);
 
     ~UDPClient();
 
