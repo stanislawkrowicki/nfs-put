@@ -224,7 +224,7 @@ void TCPServer::listen(const char *port) {
 }
 
 
-void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t size) {
+void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t size) const {
     if (!client.connected) {
         std::cout << "Tried to send to not connected" << std::endl;
         return;
@@ -235,18 +235,11 @@ void TCPServer::send(const ClientHandle &client, const char *data, const ssize_t
     if (bytesSent <= 0 && errno != EWOULDBLOCK && errno != EAGAIN)
         throw std::runtime_error(std::string("Failed to send TCP message: ") + strerror(errno));
 
-    /* TODO: Instead of busy waiting like this we should keep a queue for every client
-     * and poll their FDs to see when they're ready */
-    if (bytesSent <= 0 && (errno == EWOULDBLOCK || errno == EAGAIN)) {
-        send(client, data, size);
-        return;
-    }
-
-    if (bytesSent > 0 && bytesSent < size) {
-        const auto remainingBufferPtr = data + bytesSent;
-        const auto remainingSize = size - bytesSent;
-        send(client, remainingBufferPtr, remainingSize);
-    }
+    /* If socket is full, terminate the client. */
+    /* This could be polled to wait until empty, but we don't send much TCP data so if the socket is full
+     * then it means that the client has been inactive for a long time. */
+    if (bytesSent <= 0 && (errno == EWOULDBLOCK || errno == EAGAIN) || bytesSent < size)
+        clientManager->removeClient(client.tcpSocketFd);
 }
 
 void TCPServer::send(const ClientHandle &client, const PacketBuffer &data, const ssize_t size) {
@@ -265,29 +258,30 @@ void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
             send(client, data, size);
     }
 }
+
 void TCPServer::sendToAllInLobby(const PacketBuffer &buf, ssize_t size) const {
-    for (auto &pair : clientManager->getAllClients()) {
+    for (auto &pair: clientManager->getAllClients()) {
         const auto &client = pair.second;
         if (client.state == ClientStateLobby::InLobby) {
             send(client, buf.get(), size);
         }
-    }
+}
 }
 
 void TCPServer::sendToAllInLobbyExcept(const PacketBuffer &buf, ssize_t size, const ClientHandle &exclude) const {
-    for (auto &pair : clientManager->getAllClients()) {
+    for (auto &pair: clientManager->getAllClients()) {
         const auto &client = pair.second;
         if (client.state == ClientStateLobby::InLobby && client.id != exclude.id) {
             send(client, buf.get(), size);
         }
-    }
+}
 }
 
 void TCPServer::sendToAllInGame(const PacketBuffer &data, const ssize_t size) const {
     for (const auto &client: clientManager->getAllClients() | std::views::values) {
         if (client.state == ClientStateLobby::InGame)
             send(client, std::move(data), size);
-    }
+}
 }
 
 void TCPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, const uint16_t exceptId) const {
@@ -345,7 +339,8 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
         std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
     }
 }
-void TCPServer::notifyClientDisconnected(const ClientHandle& client) const {
+
+void TCPServer::notifyClientDisconnected(const ClientHandle &client) const {
     const auto [packet,packetSize] = TCPPacket::create<ClientDisconnectedPacket>(
         client.nick.c_str(), client.nick.size());
     const auto buf = TCPPacket::serialize(packet);
@@ -421,8 +416,7 @@ void TCPServer::loop() {
                 if (wasInLobby) {
                     notifyClientDisconnected(*client);
                 }
-                clientManager->removeClient(fd);
-                {
+                clientManager->removeClient(fd); {
                     std::lock_guard lock(state->mtx);
 
                     if (wasInLobby && state->phase == MatchPhase::Lobby) {
@@ -441,6 +435,20 @@ void TCPServer::loop() {
 
                 receivePacketFromClient(*clientManager->getClientByFd(fd));
             }
-        }
+}
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

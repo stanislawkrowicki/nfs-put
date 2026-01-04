@@ -31,7 +31,7 @@ public:
 
     //void addMessageListener(std::function<void(const Packet &)>) override;
 
-    static void send(const ClientHandle &client, const char *data, ssize_t size);
+    void send(const ClientHandle &client, const char *data, ssize_t size) const;
 
     //void send(ClientHandle client, const std::unique_ptr<char[]> &data, ssize_t size) const;
     //void sendToAll(const PacketBuffer &data, ssize_t size) const override;
