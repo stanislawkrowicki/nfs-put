@@ -139,8 +139,6 @@ add_executable(nfsput main.cpp shader.cpp
         netcode/shared/packets/tcp/server/name_accepted_packet.hpp
         netcode/client/handlers/name_taken_handler.hpp
         netcode/client/handlers/name_accepted_handler.hpp
-        netcode/shared/packets/tcp/client/udp_info_packet.hpp
-        netcode/shared/packets/udp/client/ping_packet.hpp
         netcode/client/handlers/client_connected_handler.hpp
         netcode/client/handlers/client_disconnected_handler.hpp
         netcode/client/handlers/time_until_start_handler.hpp
@@ -163,6 +161,9 @@ add_executable(nfsput main.cpp shader.cpp
         hud.hpp
         netcode/client/handlers/name_accepted_but_in_queue_handler.hpp
         netcode/client/handlers/queue_to_lobby_handler.hpp
+        netcode/shared/packets/udp/client/handshake_packet.hpp
+        netcode/shared/packets/tcp/server/handshake_ack_packet.hpp
+        netcode/client/handlers/handshake_ack_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

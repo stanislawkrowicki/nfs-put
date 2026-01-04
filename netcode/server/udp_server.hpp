@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bsd_server.hpp"
+#include "tcp_server.hpp"
 #include "../shared/packets/udp/udp_packet.hpp"
 
 #define MAX_PACKET_SIZE 1024
@@ -21,7 +22,11 @@ public:
 
     void sendToAllExcept(const PacketBuffer &data, ssize_t size, uint16_t exceptId) const;
 
-    void handlePacket(const PacketBuffer &buf, ssize_t size, ClientHandle &client) const;
+    void handlePacket(const PacketBuffer &buf, ssize_t size, ClientHandle &client);
+
+    void handlePacketFromUnknownClient(const PacketBuffer &buf, ssize_t size, const sockaddr_in &sender) const;
+
+    void setTcpBridge(const std::shared_ptr<TCPServer> &tcpServer);
 
     [[nodiscard]]
     std::unordered_map<uint16_t, ClientHandle> &getAllClients() const;
@@ -29,5 +34,7 @@ public:
 private:
     int socketFd;
 
-    [[noreturn]] void loop() const;
+    std::shared_ptr<TCPServer> tcpBridge{};
+
+    [[noreturn]] void loop();
 };

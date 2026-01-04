@@ -10,6 +10,7 @@
 
 #include "../shared/packets/udp/udp_packet.hpp"
 #include "../shared/packets/udp/client/state_packet.hpp"
+#include "handlers/handshake_handler.hpp"
 #include "handlers/state_handler.hpp"
 
 UDPServer::UDPServer(std::shared_ptr<ClientManager> clientManager) {
@@ -76,7 +77,7 @@ void UDPServer::sendToAllExcept(const PacketBuffer &data, const ssize_t size, co
 }
 
 [[noreturn]]
-void UDPServer::loop() const {
+void UDPServer::loop() {
     while (true) {
         auto buf = std::make_unique<char[]>(MAX_PACKET_SIZE);
 
@@ -91,17 +92,15 @@ void UDPServer::loop() const {
             continue;
         }
 
-        const auto client = clientManager->getClient(sender);
-
-        if (!client) {
-            continue;
+        if (const auto client = clientManager->getClient(sender)) {
+            handlePacket(std::move(buf), bytesRead, *client);
+        } else {
+            handlePacketFromUnknownClient(std::move(buf), bytesRead, sender);
         }
-
-        handlePacket(buf, bytesRead, *client);
     }
 }
 
-void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, ClientHandle &client) const {
+void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, ClientHandle &client) {
     const bool isValid = UDPPacket::validate(buf, size);
     if (!isValid) {
         std::cerr << "Received a packet with invalid checksum." << std::endl;
@@ -116,10 +115,29 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, Client
             case UDPPacketType::State:
                 StateHandler::handle(UDPPacket::deserialize<StatePacket>(buf, size), client);
                 break;
+            default:
+                std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;
+        }
+    } catch (DeserializationError &e) {
+        std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
+    }
+}
 
-            case UDPPacketType::Ping:
-                // This packet is only used to open the firewall on the client's side to let us
-                // send them UDP data later, ignore
+void UDPServer::handlePacketFromUnknownClient(const PacketBuffer &buf, const ssize_t size,
+                                              const sockaddr_in &sender) const {
+    const bool isValid = UDPPacket::validate(buf, size);
+    if (!isValid) {
+        std::cerr << "Received a packet with invalid checksum." << std::endl;
+        return;
+    }
+
+    UDPPacketType type;
+    std::memcpy(&type, buf.get(), sizeof(UDPPacketType));
+    try {
+        switch (type) {
+            case UDPPacketType::Handshake:
+                HandshakeHandler::handle(UDPPacket::deserialize<HandshakePacket>(buf, size), clientManager, sender,
+                                         tcpBridge);
                 break;
             default:
                 std::cerr << "Received packet with an unknown type: " << static_cast<uint8_t>(type) << std::endl;
@@ -127,6 +145,10 @@ void UDPServer::handlePacket(const PacketBuffer &buf, const ssize_t size, Client
     } catch (DeserializationError &e) {
         std::cerr << "Error while deserializing packet: " << e.what() << std::endl;
     }
+}
+
+void UDPServer::setTcpBridge(const std::shared_ptr<TCPServer> &tcpServer) {
+    tcpBridge = tcpServer;
 }
 
 std::unordered_map<uint16_t, ClientHandle> &UDPServer::getAllClients() const {

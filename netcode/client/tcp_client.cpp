@@ -15,6 +15,7 @@
 #include <atomic>
 #include <regex>
 
+#include "handlers/handshake_ack_handler.hpp"
 #include "handlers/laps_update_handler.hpp"
 #include "handlers/name_accepted_handler.hpp"
 #include "handlers/name_taken_handler.hpp"
@@ -143,6 +144,14 @@ void TCPClient::send(const PacketBuffer &buf, const size_t size) const {
     send(buf.get(), size);
 }
 
+void TCPClient::setId(const uint16_t id) {
+    clientId = id;
+}
+
+uint16_t TCPClient::getId() const {
+    return clientId;
+}
+
 void TCPClient::setGameReady() { {
         std::lock_guard<std::mutex> lock(state->mtx);
         state->ready = true;
@@ -187,6 +196,10 @@ void TCPClient::sendLapCount(const uint8_t lapCount) const {
     packet.lapCount = lapCount;
 
     send(TCPPacket::serialize(packet), sizeof(packet));
+}
+
+void TCPClient::setUdpBridge(const std::shared_ptr<UDPClient> &udpClient) {
+    udpBridge = udpClient;
 }
 
 [[noreturn]]
@@ -296,6 +309,13 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
                 break;
             case TCPPacketType::StartGame:
                 StartGameHandler::handle(payload, size, this);
+                break;
+            case TCPPacketType::HandshakeAck:
+                HandshakeAckHandler::handle([&]() {
+                    if (udpBridge)
+                        udpBridge->setHandshakeSuccessful();
+                    else std::cerr << "Tried to finish handshake without udpBridge set!" << std::endl;
+                });
                 break;
             case TCPPacketType::OpponentsInfo:
                 OpponentsInfoHandler::handle(payload, size);

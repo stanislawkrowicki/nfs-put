@@ -22,9 +22,10 @@
 #include "handlers/client_game_loaded_handler.hpp"
 #include "handlers/lap_count_handler.hpp"
 #include "handlers/name_handler.hpp"
-#include "handlers/udp_info_handler.hpp"
 
 #include <random>
+
+#include "../client/handlers/handshake_ack_handler.hpp"
 
 static int makeNonBlocking(const int fd) {
     const int flags = fcntl(fd, F_GETFL, 0);
@@ -170,6 +171,7 @@ void TCPServer::countdownToLobbyEnd(){
                     auto packet = StartGamePacket();
                     packet.gridPosition = client.gridPosition;
                     packet.vehicleColor = client.vehicleColor;
+                    packet.clientId = client.id;
                     const auto serialized = TCPPacket::serialize(packet);
                     send(client, serialized, sizeof(packet));
                 }
@@ -326,10 +328,6 @@ void TCPServer::handlePacket(TCPPacketType type, const PacketBuffer &payload, co
         switch (type) {
             case TCPPacketType::Name:
                 NameHandler::handle(std::string(payload.get(), size), client, this);
-                break;
-
-            case TCPPacketType::UdpInfo:
-                UdpInfoHandler::handle(std::move(payload), client, clientManager);
                 break;
 
             case TCPPacketType::ClientGameLoaded:

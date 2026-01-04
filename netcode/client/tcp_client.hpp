@@ -7,6 +7,7 @@
 #include <atomic>
 #include <condition_variable>
 
+#include "udp_client.hpp"
 #include "netcode/shared/packets/tcp/tcp_packet.hpp"
 #include "netcode/shared/packets/tcp/server/start_game_packet.hpp"
 
@@ -33,6 +34,10 @@ public:
 
     void send(const PacketBuffer &buf, size_t size) const;
 
+    void setId(uint16_t id);
+
+    uint16_t getId() const;
+
     void setGameReady();
 
     void setRaceStartTime(std::chrono::time_point<std::chrono::steady_clock> time);
@@ -51,6 +56,8 @@ public:
 
     void sendLapCount(uint8_t lapCount) const;
 
+    void setUdpBridge(const std::shared_ptr<UDPClient> &udpClient);
+
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
     mutable std::string localNick;
@@ -67,6 +74,7 @@ private:
 
     uint8_t gridPosition;
     PlayerVehicleColor vehicleColor;
+    uint16_t clientId;
 
     std::chrono::time_point<std::chrono::steady_clock> raceStartTime;
     bool countdownUntilStart{false};
@@ -81,4 +89,6 @@ private:
     void handlePacket(TCPPacketType type, const PacketBuffer &payload, ssize_t size);
 
     std::shared_ptr<ClientState> state;
+
+    std::shared_ptr<UDPClient> udpBridge{};
 };

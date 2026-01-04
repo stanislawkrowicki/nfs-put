@@ -6,6 +6,7 @@
 struct __attribute__((packed)) StartGamePayload {
     uint8_t gridPosition;
     PlayerVehicleColor vehicleColor;
+    uint16_t clientId;
 };
 
 class StartGameHandler {
@@ -23,5 +24,6 @@ public:
         client->setGridPosition(data.gridPosition);
         client->setColor(data.vehicleColor);
         client->setGameReady();
+        client->setId(data.clientId);
     }
 };

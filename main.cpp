@@ -35,9 +35,6 @@
 #include "netcode/shared/client_inputs.hpp"
 #include "netcode/client/tcp_client.hpp"
 #include "netcode/shared/packets/tcp/client/client_game_loaded_packet.hpp"
-#include "netcode/shared/packets/tcp/client/udp_info_packet.hpp"
-#include "netcode/shared/packets/udp/client/ping_packet.hpp"
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -527,11 +524,7 @@ int main() {
     }
     const auto udpClient = std::make_shared<UDPClient>(host.c_str(), port.c_str());
 
-    auto udpPort = udpClient->getPort();
-    auto udpInfoPacket = UdpInfoPacket();
-    udpInfoPacket.port = udpPort;
-
-    tcpClient->send(TCPPacket::serialize(udpInfoPacket), sizeof(udpInfoPacket));
+    tcpClient->setUdpBridge(udpClient);
 
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -658,10 +651,11 @@ int main() {
     playerVehicle->freeze();
 
     std::thread udpListenThread([udpClient] {
-        const auto packet = UDPPacket::create<PingPacket>(0, nullptr, 0);
-        udpClient->send(UDPPacket::serialize(packet), sizeof(PingPacket));
         udpClient->listen();
     });
+
+    const uint16_t clientId = tcpClient->getId();
+    udpClient->performHandshake(clientId);
 
     // const VehicleConfig opponentConfig;
     // opponentConfig.rotation = btQuaternion(btVector3(0, -1, 0), SIMD_HALF_PI);

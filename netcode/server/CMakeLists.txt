@@ -38,7 +38,6 @@ add_executable(server
         handlers/name_handler.hpp
         ../shared/packets/tcp/server/name_taken_packet.hpp
         ../shared/packets/tcp/server/name_accepted_packet.hpp
-        handlers/udp_info_handler.hpp
         ../shared/packets/tcp/server/client_connected_packet.hpp
         ../shared/packets/tcp/server/client_disconnected_packet.hpp
         ../shared/packets/tcp/server/time_until_start_packet.hpp
@@ -53,4 +52,8 @@ add_executable(server
         handlers/lap_count_handler.hpp
         ../shared/packets/tcp/server/laps_update_packet.hpp
         ../shared/packets/tcp/server/name_accepted_but_in_queue_packet.hpp
-        ../shared/packets/tcp/server/queue_to_lobby.hpp)
+        ../shared/packets/tcp/server/queue_to_lobby.hpp
+        handlers/handshake_handler.hpp
+        ../shared/packets/udp/client/handshake_packet.hpp
+        ../shared/packets/tcp/server/handshake_ack_packet.hpp
+)

@@ -2,7 +2,7 @@
 #include "../tcp_packet_header.hpp"
 #include "../../../opponent_info.hpp"
 
-constexpr int START_GAME_PAYLOAD_SIZE = 4;
+constexpr int START_GAME_PAYLOAD_SIZE = 6;
 
 struct __attribute__((packed)) StartGamePacket {
     TCPPacketHeader header{
@@ -11,4 +11,5 @@ struct __attribute__((packed)) StartGamePacket {
     };
     uint8_t gridPosition{};
     PlayerVehicleColor vehicleColor{};
+    uint16_t clientId{};
 };

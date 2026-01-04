@@ -8,7 +8,7 @@
 #include "../shared/packets/udp/client/state_packet.hpp"
 #include "handlers/opponent_states_handler.hpp"
 #include "netcode/shared/client_inputs.hpp"
-#include "netcode/shared/packets/udp/client/ping_packet.hpp"
+#include "netcode/shared/packets/udp/client/handshake_packet.hpp"
 
 UDPClient::UDPClient(const char *host, const char *port) {
     addrinfo hints{};
@@ -137,6 +137,34 @@ void UDPClient::stopListening() {
 void UDPClient::close() {
     ::close(socketFd);
     socketFd = -1;
+}
+
+void UDPClient::performHandshake(const uint16_t clientId) {
+    char payload[2];
+    std::memcpy(payload, &clientId, sizeof(clientId));
+
+    const auto packet = UDPPacket::create<HandshakePacket>(0, payload, HANDSHAKE_PAYLOAD_SIZE);
+    const auto serialized = UDPPacket::serialize(packet);
+
+    handshakeSuccessful = false;
+
+    while (!handshakeSuccessful) {
+        std::cout << "Sending handshake" << std::endl;
+        this->send(serialized, sizeof(HandshakePacket));
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        this->handshakeAttempts++;
+
+        if (handshakeAttempts > MAX_HANDSHAKE_ATTEMPTS) {
+            std::cerr << "Failed to perform handshake." << std::endl;
+            this->waitForMessages = false;
+            return;
+        }
+    }
+}
+
+void UDPClient::setHandshakeSuccessful() {
+    handshakeSuccessful = true;
 }
 
 uint16_t UDPClient::getPort() const {

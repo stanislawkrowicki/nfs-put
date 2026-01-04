@@ -5,5 +5,5 @@
 enum class UDPPacketType : uint8_t {
     State,
     OpponentStates,
-    Ping,
+    Handshake,
 };

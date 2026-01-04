@@ -22,7 +22,9 @@ int main(const int argc, char *argv[]) {
     auto state = std::make_shared<ServerState>();
     const auto tcpServer = std::make_shared<TCPServer>(clientManager, state);
 
-    std::thread udpServerThread([&] {
+    udpServer->setTcpBridge(tcpServer);
+
+    std::thread udpServerThread([&, tcpServer] {
         udpServer->listen(argv[1]);
     });
 
