@@ -78,7 +78,7 @@ public:
         for (auto it = clients.begin(); it != clients.end(); ++it) {
             if (it->second.tcpSocketFd == fd) {
 
-                if (it->second.state == ClientStateLobby::InLobby) {
+                if (it->second.state == ClientStateLobby::InLobby || it->second.state == ClientStateLobby::InGame) {
                     numberOfConnectedClients--;
                 }
                 clientIdsByAddress.erase(packAddress(it->second.udpAddr));

@@ -733,6 +733,7 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    tcpClient->closeWindow();
 
     glfwDestroyWindow(window);
     glfwTerminate();

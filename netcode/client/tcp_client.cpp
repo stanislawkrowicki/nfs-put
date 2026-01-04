@@ -76,6 +76,12 @@ void TCPClient::refreshScreen() const {
 std::string TCPClient::getPlayerNickname() const {
     return localNick;
 }
+void TCPClient::closeWindow() const {
+    shutdown(socketFd,SHUT_RDWR);
+    close(socketFd);
+    close(epollFd);
+}
+
 
 
 void TCPClient::connect(const char* host, const char* port) {
