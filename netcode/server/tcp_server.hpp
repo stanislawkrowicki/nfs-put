@@ -11,6 +11,7 @@
 #define MAX_PACKET_SIZE 1024
 #define MAX_LOBBY_SIZE 8
 #define TIME_TO_LAUNCH 20
+#define RACE_END_TIMEOUT 30
 
 class TCPServer final {
 public:
@@ -18,8 +19,12 @@ public:
 
     ~TCPServer();
 
+    std::atomic<bool> raceEndCountdownActive{false};
+    std::chrono::steady_clock::time_point raceEndStartTime;
+
     std::shared_ptr<ClientManager> clientManager;
     std::shared_ptr<ServerState> state;
+
 
     void listen(const char *port);
 
@@ -72,6 +77,7 @@ private:
 
     const int lobbyEndTimeout{TIME_TO_LAUNCH};
     std::chrono::steady_clock::time_point lobbyStartTime;
+
 
     std::vector<PlayerVehicleColor> colors = {
         {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0},

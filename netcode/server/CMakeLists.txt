@@ -51,4 +51,5 @@ add_executable(server
         handlers/lap_count_handler.hpp
         ../shared/packets/tcp/server/laps_update_packet.hpp
         ../shared/packets/tcp/server/name_accepted_but_in_queue_packet.hpp
-        ../shared/packets/tcp/server/queue_to_lobby.hpp)
+        ../shared/packets/tcp/server/queue_to_lobby.hpp
+        ../shared/packets/tcp/server/race_end_countdown_packet.hpp)

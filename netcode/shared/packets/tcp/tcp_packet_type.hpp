@@ -19,5 +19,6 @@ enum class TCPPacketType : uint8_t {
     LapCount,
     LapsUpdate,
     NameAcceptedButInQueue,
-    QueueToLobby
+    QueueToLobby,
+    RaceEndCountDownPacket
 };

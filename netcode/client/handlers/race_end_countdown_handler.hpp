@@ -1,8 +1,17 @@
-//
-// Created by Dawid on 1/4/26.
-//
+#pragma once
+#include "netcode/client/tcp_client.hpp"
 
-#ifndef NFSPUT_RACE_END_COUNTDOWN_HANDLER_HPP
-#define NFSPUT_RACE_END_COUNTDOWN_HANDLER_HPP
+#include <chrono>
 
-#endif // NFSPUT_RACE_END_COUNTDOWN_HANDLER_HPP
+class RaceEndCountdownHandler {
+public:
+    static void handle(const PacketBuffer &buf, const ssize_t size, TCPClient *tcpClient) {
+        if (size < sizeof(uint8_t))
+            throw DeserializationError("RaceEndCountdown packet too small");
+
+        uint8_t seconds;
+        std::memcpy(&seconds, buf.get(), sizeof(seconds));
+
+        tcpClient->setRaceEndSeconds(seconds);
+    }
+};

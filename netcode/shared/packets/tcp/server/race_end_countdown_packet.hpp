@@ -1,8 +1,14 @@
-//
-// Created by Dawid on 1/4/26.
-//
+#pragma once
 
-#ifndef NFSPUT_RACE_END_COUNTDOWN_PACKET_HPP
-#define NFSPUT_RACE_END_COUNTDOWN_PACKET_HPP
+#include "../tcp_packet_header.hpp"
+#include "../../../../server/tcp_server.hpp"
 
-#endif // NFSPUT_RACE_END_COUNTDOWN_PACKET_HPP
+#include <cstdint>
+
+struct __attribute__((packed)) RaceEndCountdownPacket {
+    TCPPacketHeader header{
+        .type = TCPPacketType::RaceEndCountDownPacket,
+        .payloadSize = sizeof(uint8_t)
+    };
+    uint8_t lapCount{RACE_END_TIMEOUT};
+};

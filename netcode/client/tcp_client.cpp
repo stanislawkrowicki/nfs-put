@@ -30,6 +30,7 @@
 #include "netcode/shared/packets/tcp/client/name_packet.hpp"
 #include "handlers/name_accepted_but_in_queue_handler.hpp"
 #include "handlers/queue_to_lobby_handler.hpp"
+#include "handlers/race_end_countdown_handler.hpp"
 
 static int makeNonBlocking(const int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -123,6 +124,8 @@ void TCPClient::connect(const char* host, const char* port) {
             localTimeLeft = time - 1;
 
         }
+        if (raceEndSeconds.load() >= 0)
+            raceEndSeconds--;
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 });
@@ -189,6 +192,18 @@ void TCPClient::sendLapCount(const uint8_t lapCount) const {
 
     send(TCPPacket::serialize(packet), sizeof(packet));
 }
+void TCPClient::setRaceEndSeconds(uint8_t seconds) {
+    raceEndSeconds.store(seconds);
+}
+
+bool TCPClient::isRaceEndCountdownActive() const {
+    return raceEndSeconds.load() >= 0;
+}
+
+int TCPClient::getRaceEndSeconds() const {
+    return std::max(0, raceEndSeconds.load());
+}
+
 
 [[noreturn]]
 void TCPClient::loop(){
@@ -313,6 +328,8 @@ void TCPClient::handlePacket(const TCPPacketType type, const PacketBuffer &paylo
             case TCPPacketType::QueueToLobby:
                 QueueToLobbyHandler::handle(this);
                 break;
+            case TCPPacketType::RaceEndCountDownPacket:
+                RaceEndCountdownHandler::handle(payload, size, this);
             default:
                 std::cerr << "Received packet with unknown type: " << static_cast<uint8_t>(type) << std::endl;
         }

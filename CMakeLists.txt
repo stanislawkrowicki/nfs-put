@@ -163,6 +163,7 @@ add_executable(nfsput main.cpp shader.cpp
         hud.hpp
         netcode/client/handlers/name_accepted_but_in_queue_handler.hpp
         netcode/client/handlers/queue_to_lobby_handler.hpp
+        netcode/client/handlers/race_end_countdown_handler.hpp
 )
 
 target_link_libraries(nfsput PRIVATE glfw assimp BulletDynamics BulletCollision LinearMath nlohmann_json::nlohmann_json)

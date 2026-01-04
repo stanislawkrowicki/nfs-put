@@ -507,6 +507,10 @@ void drawScene(GLFWwindow *window, const std::shared_ptr<TCPClient> &tcpClient) 
     if (tcpClient->isRaceStartCountdownActive())
         HUD::drawCountdown(tcpClient->getTimeUntilRaceStart());
 
+    if (tcpClient->isRaceEndCountdownActive()) {
+        HUD::drawCountdown(tcpClient->getRaceEndSeconds());
+    }
+
     HUD::render();
 }
 
