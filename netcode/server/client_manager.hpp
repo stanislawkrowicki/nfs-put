@@ -19,16 +19,14 @@ public:
     }
     void resetAll() {
         for (auto it = clients.begin(); it != clients.end(); ) {
-            auto& client = it->second;
-
-            if (client.connected && client.state == ClientStateLobby::InGame) {
-                close(client.tcpSocketFd);
-                it = clients.erase(it);
-                numberOfConnectedClients--;
-            } else {
-                ++it;
-            }
+        if (it->second.state == ClientStateLobby::InGame) {
+            close(it->second.tcpSocketFd);
+            it = clients.erase(it);
+        } else {
+            ++it;
         }
+    }
+    numberOfConnectedClients = 0;
     }
 
     bool nameTaken(const std::string & nickname, const uint16_t client_id) {
@@ -79,12 +77,13 @@ public:
     void removeClient(int fd) {
         for (auto it = clients.begin(); it != clients.end(); ++it) {
             if (it->second.tcpSocketFd == fd) {
+
+                if (it->second.state == ClientStateLobby::InLobby) {
+                    numberOfConnectedClients--;
+                }
                 clientIdsByAddress.erase(packAddress(it->second.udpAddr));
-
                 close(it->second.tcpSocketFd);
-
                 clients.erase(it);
-                numberOfConnectedClients--;
                 break;
             }
         }
@@ -109,6 +108,7 @@ public:
     static void ToQueue(const std::string &nickname, ClientHandle & client) {
         client.nick = nickname;
         client.state = ClientStateLobby::WaitingInQueue;
+        client.joinQueueTime = std::chrono::steady_clock::now();
     }
 
     ClientHandle *newClient(sockaddr_in addr, int fd) {

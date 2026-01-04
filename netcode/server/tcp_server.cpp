@@ -75,35 +75,44 @@ void TCPServer::assignColors(){
 }
 void TCPServer::addFromQueue() {
     auto& clients = clientManager->getAllClients();
-    // // Count current lobby players
-    // size_t lobbyCount = 0;
-    // for (const auto& client : clients | std::views::values) {
-    //     if (client.connected && client.state == ClientStateLobby::InLobby) {
-    //         ++lobbyCount;
-    //     }
-    // }
+
+    // Count current lobby players
     size_t lobbyCount = 0;
-    // Fill lobby from queue
-    for (auto& client : clients | std::views::values) {
-        if (lobbyCount >= MAX_LOBBY_SIZE)
-            break;
-
-        if (!client.connected)
-            continue;
-
-        if (client.state == ClientStateLobby::WaitingInQueue) {
-            client.gridPosition = static_cast<uint8_t>(lobbyCount);
+    for (const auto& client : clients | std::views::values) {
+        if (client.connected && client.state == ClientStateLobby::InLobby) {
             ++lobbyCount;
-
-            client.state= ClientStateLobby::InLobby;
-            constexpr auto response = QueueToLobbyPacket();
-            send(client, TCPPacket::serialize(response), sizeof(response));
-
-            NameHandler::sendClientConnectedPacket(client, this);
-            NameHandler::sendTimeUntilStartPacket(this);
-            NameHandler::sendClientList(client,this);
-
         }
+    }
+
+    if (lobbyCount >= MAX_LOBBY_SIZE) return;
+
+    // Find waiting clients sorted by joinQueueTime
+    std::vector<ClientHandle*> waitingClients;
+    for (auto &client : clients | std::views::values) {
+        if (client.connected && client.state == ClientStateLobby::WaitingInQueue) {
+            waitingClients.push_back(&client);
+        }
+    }
+
+    std::sort(waitingClients.begin(), waitingClients.end(),
+              [](const ClientHandle* a, const ClientHandle* b) {
+                  return a->joinQueueTime < b->joinQueueTime; // oldest first
+              });
+
+    // Add as many as we can fit
+    for (auto* client : waitingClients) {
+        if (lobbyCount >= MAX_LOBBY_SIZE) break;
+
+        client->gridPosition = static_cast<uint8_t>(lobbyCount++);
+        client->state = ClientStateLobby::InLobby;
+        clientManager->numberOfConnectedClients++;
+
+        constexpr auto response = QueueToLobbyPacket();
+        send(*client, TCPPacket::serialize(response), sizeof(response));
+
+        NameHandler::sendClientConnectedPacket(*client, this);
+        NameHandler::sendTimeUntilStartPacket(this);
+        NameHandler::sendClientList(*client, this);
     }
 }
 
@@ -114,6 +123,7 @@ void TCPServer::resetLobby() {
     clientManager->resetAll();
     resetLobbyStartTime();
     addFromQueue();
+    countdownToLobbyEnd();
     std::cout << "Lobby has been reset\n";
 }
 int TCPServer::timeUntilStart() const {
@@ -157,11 +167,11 @@ void TCPServer::countdownToLobbyEnd(){
                 for (auto &client: clients | std::views::values) {
                     if (!client.connected || client.state != ClientStateLobby::InLobby) continue;
                     client.state = ClientStateLobby::InGame;
-                    // auto packet = StartGamePacket();
-                    // packet.gridPosition = client.gridPosition;
-                    // packet.vehicleColor = client.vehicleColor;
-                    // const auto serialized = TCPPacket::serialize(packet);
-                    // send(client, serialized, sizeof(packet));
+                    auto packet = StartGamePacket();
+                    packet.gridPosition = client.gridPosition;
+                    packet.vehicleColor = client.vehicleColor;
+                    const auto serialized = TCPPacket::serialize(packet);
+                    send(client, serialized, sizeof(packet));
                 }
 
                 for (auto &client: clients | std::views::values) {
@@ -408,12 +418,18 @@ void TCPServer::loop() {
             }
             if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 auto client = clientManager->getClientByFd(fd);
-
-                if (client && client->state == ClientStateLobby::InLobby) {
+                const bool wasInLobby = client && client->state == ClientStateLobby::InLobby;
+                if (wasInLobby) {
                     notifyClientDisconnected(*client);
                 }
                 clientManager->removeClient(fd);
+                {
+                    std::lock_guard lock(state->mtx);
 
+                    if (wasInLobby && state->phase == MatchPhase::Lobby) {
+                        addFromQueue();
+                    }
+                }
                 TimeUntilStartPacket countdown{};
                 countdown.seconds = timeUntilStart();
                 auto countdownBuf = TCPPacket::serialize(countdown);

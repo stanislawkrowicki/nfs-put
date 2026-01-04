@@ -23,9 +23,8 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
     const auto tickDuration = milliseconds(1000 / TICK_RATE);
     int tickCounter = 0;
     auto nextTick = steady_clock::now();
-
     while (true) {
-        state->endMatch();
+        //
         {
             std::lock_guard lock(state->mtx);
             if (state->phase == MatchPhase::Finished)
@@ -40,7 +39,6 @@ void Loop::run(const std::shared_ptr<UDPServer> &udpServer,const std::shared_ptr
                 sendLatestStates();
             }
         }
-
 
         if (tickCounter % 100 == 0) {
             std::cout << std::format("Finished tick {}, time until next tick is {}", tickCounter,
