@@ -53,7 +53,7 @@ int main(const int argc, char *argv[]) {
         tcpServer->resetLobbyStartTime();
         Loop::reset();
         tcpServer->resetLobby();
-        clientManager->resetAll();
+        //clientManager->resetAll();
 
         {
             std::lock_guard lock(state->mtx);

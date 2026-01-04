@@ -2,6 +2,7 @@
 
 #include "../shared/opponent_info.hpp"
 
+#include <chrono>
 #include <netinet/in.h>
 #include <string>
 enum class ClientStateLobby {
@@ -22,7 +23,7 @@ struct ClientHandle {
     ClientStateLobby state = ClientStateLobby::WaitingForNick;
 
     PlayerVehicleColor vehicleColor;
-
+    std::chrono::steady_clock::time_point joinQueueTime;
     uint8_t gridPosition;
     bool gameLoaded;
 
