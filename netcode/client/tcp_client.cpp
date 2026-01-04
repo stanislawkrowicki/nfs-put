@@ -89,14 +89,13 @@ void TCPClient::connect(const char* host, const char* port) {
     if (socketFd < 0)
         throw std::runtime_error(strerror(errno));
 
-    makeNonBlocking(socketFd);
-
     if (::connect(socketFd, res->ai_addr, res->ai_addrlen) < 0) {
-        if (errno != EINPROGRESS)
-            throw std::runtime_error(strerror(errno));
+        throw std::runtime_error(strerror(errno));
     }
 
     freeaddrinfo(res);
+
+    makeNonBlocking(socketFd);
 
     epollFd = epoll_create1(0);
     if (epollFd < 0)
