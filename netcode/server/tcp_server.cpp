@@ -478,6 +478,10 @@ void TCPServer::loop() {
                         addFromQueue();
                     }
                 }
+                if (clientManager->getNumberOfConnectedClients()==0) {
+                    state->endMatch();
+                    continue;
+                }
                 TimeUntilStartPacket countdown{};
                 countdown.seconds = timeUntilStart();
                 auto countdownBuf = TCPPacket::serialize(countdown);

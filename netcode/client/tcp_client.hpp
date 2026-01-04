@@ -66,6 +66,7 @@ public:
     bool isRaceEndCountdownActive() const;
 
     int getRaceEndSeconds() const;
+    void closeWindow() const;
 
     mutable std::vector<std::string> lobbyNicks;
     mutable std::mutex lobbyMtx;
