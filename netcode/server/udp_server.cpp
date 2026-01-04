@@ -32,6 +32,7 @@ void UDPServer::listen(const char *port) {
     addrinfo *res, hints{};
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_family = AF_INET;
+    hints.ai_flags = AI_PASSIVE;
 
     if (const int rv = getaddrinfo(nullptr, port, &hints, &res))
         throw std::runtime_error(std::string("UdpBSDServer getaddrinfo failed: ") + gai_strerror(rv));
